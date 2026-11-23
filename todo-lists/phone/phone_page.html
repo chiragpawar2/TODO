@@ -506,7 +506,9 @@ function playground(text){
 // Tried in order. Google retires models for new keys (gemini-2.5-flash already
 // refuses new users) and the newest ones are often "busy" at peak times, so a
 // busy or retired model just hands the question to the next one.
-const GEMINI_MODELS=["gemini-3.8-flash","gemini-flash-latest","gemini-3.5-flash","gemini-3.1-flash-lite"];
+// Ordered by what worked in testing: gemini-3.5-flash answered with low thinking
+// and a 600-token allowance; the others are tried in turn if it is busy.
+const GEMINI_MODELS=["gemini-3.5-flash","gemini-3.8-flash","gemini-flash-latest","gemini-3.1-flash-lite"];
 const getKey=()=>store.get("hb-gemini-key","");
 let convo=[];
 function persona(){
@@ -521,10 +523,10 @@ function persona(){
 async function askBrain(text){
   const key=getKey(); if(!key) return null;
   convo.push({role:"user",parts:[{text}]}); convo=convo.slice(-10);
-  const body=JSON.stringify({systemInstruction:{parts:[{text:persona()}]},contents:convo,generationConfig:{maxOutputTokens:220,temperature:0.7}});
+  const body=JSON.stringify({systemInstruction:{parts:[{text:persona()}]},contents:convo,generationConfig:{maxOutputTokens:600,temperature:0.7,thinkingConfig:{thinkingLevel:'low'}}});
   let busy=false;
   for(const model of GEMINI_MODELS){
-    const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),20000);
+    const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),45000);   // thinking takes ~20 s on a busy day
     let r;
     try{
       r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent",{
