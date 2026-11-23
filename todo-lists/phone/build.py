@@ -19,6 +19,8 @@ import json
 import os
 import re
 import shutil
+import subprocess
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -131,12 +133,39 @@ def emotion_model() -> None:
               open(os.path.join(MODEL_OUT, "manifest.json"), "w"), indent=2)
 
 
+def check(html: str) -> None:
+    """Refuse to ship a page whose code does not parse.
+
+    The model worker is stored as a string inside the page, so a quoting slip
+    breaks the whole app while the build still "succeeds". Parse both the page
+    scripts and the worker with node, when node is installed.
+    """
+    if not shutil.which("node"):
+        print("node not found - skipped the syntax check")
+        return
+    js = "\n;\n".join(re.findall(r"<script>\n(.*?)</script>", html, re.S))
+    m = re.search(r'const MODEL_WORKER=(".*?");\n', js, re.S)
+    jobs = [("page", ".js", js)]
+    if m:
+        jobs.append(("model worker", ".mjs", json.loads(m.group(1))))
+    for name, ext, code in jobs:
+        with tempfile.NamedTemporaryFile("w", suffix=ext, delete=False, encoding="utf-8") as f:
+            f.write(code)
+        r = subprocess.run(["node", "--check", f.name], capture_output=True, text=True)
+        os.unlink(f.name)
+        if r.returncode:
+            raise SystemExit(f"{name} code does not parse:\n{r.stderr[-800:]}")
+    print("checked: page and model worker parse")
+
+
 def main() -> None:
     os.makedirs(DOCS, exist_ok=True)
     page = io.open(os.path.join(HERE, "phone_page.html"), encoding="utf-8").read()
     assert page.count("<!--FACE_AND_READER-->") == 1
     page = page.replace("<!--FACE_AND_READER-->", face_and_reader())
-    io.open(os.path.join(DOCS, "index.html"), "w", encoding="utf-8").write(HEAD + page + "\n</body>\n</html>\n")
+    html = HEAD + page + "\n</body>\n</html>\n"
+    check(html)
+    io.open(os.path.join(DOCS, "index.html"), "w", encoding="utf-8").write(html)
     manifest = {
         "name": "homebot", "short_name": "homebot", "start_url": "./", "scope": "./",
         "display": "standalone", "background_color": "#0c0d10", "theme_color": "#0c0d10",

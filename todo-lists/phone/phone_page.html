@@ -503,7 +503,10 @@ function playground(text){
   return false;
 }
 /* ---------- brain: Gemini free tier, key kept on this phone only ---------- */
-const GEMINI_MODEL="gemini-2.5-flash";
+// Tried in order. Google retires models for new keys (gemini-2.5-flash already
+// refuses new users) and the newest ones are often "busy" at peak times, so a
+// busy or retired model just hands the question to the next one.
+const GEMINI_MODELS=["gemini-3.8-flash","gemini-flash-latest","gemini-3.5-flash","gemini-3.1-flash-lite"];
 const getKey=()=>store.get("hb-gemini-key","");
 let convo=[];
 function persona(){
@@ -518,24 +521,26 @@ function persona(){
 async function askBrain(text){
   const key=getKey(); if(!key) return null;
   convo.push({role:"user",parts:[{text}]}); convo=convo.slice(-10);
-  const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),20000);
-  try{
-    const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+GEMINI_MODEL+":generateContent",{
-      method:"POST",signal:ctl.signal,
-      headers:{"Content-Type":"application/json","x-goog-api-key":key},
-      body:JSON.stringify({systemInstruction:{parts:[{text:persona()}]},contents:convo,
-        generationConfig:{maxOutputTokens:220,temperature:0.7,thinkingConfig:{thinkingBudget:0}}})});
+  const body=JSON.stringify({systemInstruction:{parts:[{text:persona()}]},contents:convo,generationConfig:{maxOutputTokens:220,temperature:0.7}});
+  let busy=false;
+  for(const model of GEMINI_MODELS){
+    const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),20000);
+    let r;
+    try{
+      r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent",{
+        method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","x-goog-api-key":key},body});
+    }catch(e){ clearTimeout(tm); convo.pop(); return {err:navigator.onLine===false?"I'm offline right now.":"I couldn't reach my brain. Check the internet and try again."}; }
     clearTimeout(tm);
-    if(!r.ok){ convo.pop();
-      if(r.status===400||r.status===401||r.status===403) return {err:"That Gemini key didn't work. Check it in the Brain box."};
-      if(r.status===429) return {err:"I've used up the free limit for now. Try again in a little while."};
-      return {err:"My brain had a problem. Please try again."}; }
+    if(r.status===404||r.status===429||r.status>=500){ if(r.status!==404) busy=true; continue; }   // retired, rate-limited or busy: next model
+    if(!r.ok){ convo.pop(); return {err:(r.status===400||r.status===401||r.status===403)?"That Gemini key didn't work. Check it in the Brain box.":"My brain had a problem. Please try again."}; }
     const j=await r.json();
     const out=((j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts)||[]).map(p=>p.text||"").join("").replace(/[*_#`>]/g,"").trim();
     if(!out){ convo.pop(); return {err:"I couldn't think of an answer to that."}; }
     convo.push({role:"model",parts:[{text:out}]});
     return {text:out};
-  }catch(e){ clearTimeout(tm); convo.pop(); return {err:navigator.onLine===false?"I'm offline right now.":"I couldn't reach my brain. Check the internet and try again."}; }
+  }
+  convo.pop();
+  return {err:busy?"Google's AI is very busy right now. Ask me again in a minute.":"I couldn't find a working AI model. Please try again later."};
 }
 async function think(text,real){
   if(!getKey()){ say(real.length?"I hear you. Add your free Gemini key in the Brain box and I can answer anything.":"Add your free Gemini key in the Brain box and I can answer anything. For lists, try: open groceries."); return; }
@@ -581,7 +586,7 @@ $("#keyform").onsubmit=e=>{ e.preventDefault(); const v=$("#key").value.trim(); 
 $("#forget").onclick=()=>{ store.del("hb-gemini-key"); convo=[]; showKey(); };
 showKey();
 
-const MODEL_WORKER="\nimport { AutoTokenizer, env } from \"https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2/dist/transformers.min.js\";\nimport * as ort from \"https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.wasm.min.mjs\";\nlet tok=null, sess=null, labels=null;\nconst CACHE=\"hb-emotion-v1\";\nasync function part(url,size,onBytes){\n  const c=await caches.open(CACHE); const hit=await c.match(url);\n  if(hit){ const b=new Uint8Array(await hit.arrayBuffer()); onBytes(b.length); return b; }\n  const res=await fetch(url); if(!res.ok) throw new Error(\"download failed (\"+res.status+\")\");\n  const rd=res.body.getReader(); const buf=new Uint8Array(size); let off=0;\n  for(;;){ const {done,value}=await rd.read(); if(done) break; buf.set(value,off); off+=value.length; onBytes(off); }\n  if(off!==size) throw new Error(\"the download was cut short\");\n  await c.put(url,new Response(buf)); return buf;\n}\nself.onmessage=async e=>{\n  const m=e.data;\n  if(m.type===\"load\"){\n    try{\n      const base=m.base, man=await (await fetch(base+\"manifest.json\",{cache:\"no-cache\"})).json();\n      const got=man.parts.map(()=>0), tick=()=>self.postMessage({type:\"progress\",loaded:got.reduce((a,b)=>a+b,0),total:man.total});\n      const bufs=[]; for(let i=0;i<man.parts.length;i++){ const p=man.parts[i]; bufs.push(await part(base+p.file,p.size,n=>{got[i]=n;tick();})); }\n      const all=new Uint8Array(man.total); let o=0; for(const b of bufs){ all.set(b,o); o+=b.length; }\n      self.postMessage({type:\"stage\",text:\"Checking\u2026\"});\n      const h=Array.from(new Uint8Array(await crypto.subtle.digest(\"SHA-256\",all))).map(x=>x.toString(16).padStart(2,\"0\")).join(\"\");\n      if(h!==man.sha256){ await caches.delete(CACHE); throw new Error(\"the download was damaged. Tap Download to try again\"); }\n      self.postMessage({type:\"stage\",text:\"Starting\u2026\"});\n      ort.env.wasm.wasmPaths=\"https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/\"; ort.env.wasm.numThreads=1;\n      sess=await ort.InferenceSession.create(all.buffer,{executionProviders:[\"wasm\"]});\n      env.allowRemoteModels=false; env.allowLocalModels=true; env.localModelPath=base.replace(/go-emotions\\/$/,\"\");\n      tok=await AutoTokenizer.from_pretrained(\"go-emotions\");\n      labels=(await (await fetch(base+\"config.json\")).json()).id2label;\n      self.postMessage({type:\"ready\"});\n    }catch(err){ self.postMessage({type:\"error\",text:String(err&&err.message||err)}); }\n  }\n  if(m.type===\"classify\"){\n    if(!sess){ self.postMessage({type:\"result\",id:m.id,label:null,score:0}); return; }\n    try{\n      const enc=tok(m.text,{truncation:true,max_length:128,padding:"max_length"});   // same as tokenizer.json, so results match the Python app\n      const ids=enc.input_ids.data, mask=enc.attention_mask.data, n=ids.length;\n      const out=await sess.run({input_ids:new ort.Tensor(\"int64\",ids,[1,n]),attention_mask:new ort.Tensor(\"int64\",mask,[1,n])});\n      const lg=out[sess.outputNames[0]].data; let best=0; for(let i=1;i<lg.length;i++) if(lg[i]>lg[best]) best=i;\n      self.postMessage({type:\"result\",id:m.id,label:labels[best],score:1/(1+Math.exp(-lg[best]))});\n    }catch(err){ self.postMessage({type:\"result\",id:m.id,label:null,score:0}); }\n  }\n  if(m.type===\"forget\"){ try{ await caches.delete(CACHE); }catch(e){} self.postMessage({type:\"forgotten\"}); }\n};\n";
+const MODEL_WORKER="\nimport { AutoTokenizer, env } from \"https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2/dist/transformers.min.js\";\nimport * as ort from \"https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.wasm.min.mjs\";\nlet tok=null, sess=null, labels=null;\nconst CACHE=\"hb-emotion-v1\";\nasync function part(url,size,onBytes){\n  const c=await caches.open(CACHE); const hit=await c.match(url);\n  if(hit){ const b=new Uint8Array(await hit.arrayBuffer()); onBytes(b.length); return b; }\n  const res=await fetch(url); if(!res.ok) throw new Error(\"download failed (\"+res.status+\")\");\n  const rd=res.body.getReader(); const buf=new Uint8Array(size); let off=0;\n  for(;;){ const {done,value}=await rd.read(); if(done) break; buf.set(value,off); off+=value.length; onBytes(off); }\n  if(off!==size) throw new Error(\"the download was cut short\");\n  await c.put(url,new Response(buf)); return buf;\n}\nself.onmessage=async e=>{\n  const m=e.data;\n  if(m.type===\"load\"){\n    try{\n      const base=m.base, man=await (await fetch(base+\"manifest.json\",{cache:\"no-cache\"})).json();\n      const got=man.parts.map(()=>0), tick=()=>self.postMessage({type:\"progress\",loaded:got.reduce((a,b)=>a+b,0),total:man.total});\n      const bufs=[]; for(let i=0;i<man.parts.length;i++){ const p=man.parts[i]; bufs.push(await part(base+p.file,p.size,n=>{got[i]=n;tick();})); }\n      const all=new Uint8Array(man.total); let o=0; for(const b of bufs){ all.set(b,o); o+=b.length; }\n      self.postMessage({type:\"stage\",text:\"Checking\u2026\"});\n      const h=Array.from(new Uint8Array(await crypto.subtle.digest(\"SHA-256\",all))).map(x=>x.toString(16).padStart(2,\"0\")).join(\"\");\n      if(h!==man.sha256){ await caches.delete(CACHE); throw new Error(\"the download was damaged. Tap Download to try again\"); }\n      self.postMessage({type:\"stage\",text:\"Starting\u2026\"});\n      ort.env.wasm.wasmPaths=\"https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/\"; ort.env.wasm.numThreads=1;\n      sess=await ort.InferenceSession.create(all.buffer,{executionProviders:[\"wasm\"]});\n      env.allowRemoteModels=false; env.allowLocalModels=true; env.localModelPath=base.replace(/go-emotions\\/$/,\"\");\n      tok=await AutoTokenizer.from_pretrained(\"go-emotions\");\n      labels=(await (await fetch(base+\"config.json\")).json()).id2label;\n      self.postMessage({type:\"ready\"});\n    }catch(err){ self.postMessage({type:\"error\",text:String(err&&err.message||err)}); }\n  }\n  if(m.type===\"classify\"){\n    if(!sess){ self.postMessage({type:\"result\",id:m.id,label:null,score:0}); return; }\n    try{\n      const enc=tok(m.text,{truncation:true,max_length:128,padding:'max_length'});   // same as tokenizer.json, so results match the Python app\n      const ids=enc.input_ids.data, mask=enc.attention_mask.data, n=ids.length;\n      const out=await sess.run({input_ids:new ort.Tensor(\"int64\",ids,[1,n]),attention_mask:new ort.Tensor(\"int64\",mask,[1,n])});\n      const lg=out[sess.outputNames[0]].data; let best=0; for(let i=1;i<lg.length;i++) if(lg[i]>lg[best]) best=i;\n      self.postMessage({type:\"result\",id:m.id,label:labels[best],score:1/(1+Math.exp(-lg[best]))});\n    }catch(err){ self.postMessage({type:\"result\",id:m.id,label:null,score:0}); }\n  }\n  if(m.type===\"forget\"){ try{ await caches.delete(CACHE); }catch(e){} self.postMessage({type:\"forgotten\"}); }\n};\n";
 /* ---------- emotion model: hosted on this site in 2 parts, run in a worker ----------
    Same model, labels and 0.45 threshold as todo-character/homebot/face/fallback.py,
    and the same rule: only for English lines the sentence reader could not place. */
