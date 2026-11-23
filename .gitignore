@@ -5,7 +5,8 @@ config.yaml
 
 # local data and downloads
 *.db
-models/
+# the single 120 MB model file is over GitHub's limit; the site carries it in parts
+/todo-character/models/
 
 # Python
 __pycache__/

@@ -1,0 +1,16 @@
+{
+  "name": "go-emotions (int8)",
+  "total": 125397543,
+  "sha256": "0c1981c5b479674747911c8e2228f0c4ec90bf47bf66e830f7d4fc62be082958",
+  "parts": [
+    {
+      "file": "model.part1",
+      "size": 62698772
+    },
+    {
+      "file": "model.part2",
+      "size": 62698771
+    }
+  ],
+  "threshold": 0.45
+}

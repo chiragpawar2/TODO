@@ -13,15 +13,20 @@ Output:
     docs/icon-192.png, icon-512.png, apple-touch-icon.png
     docs/.nojekyll             serve files as they are
 """
+import hashlib
 import io
 import json
 import os
 import re
+import shutil
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 FACE = os.path.join(ROOT, "todo-character", "prototypes", "homebot-face.html")
 DOCS = os.path.join(ROOT, "docs")
+MODEL_SRC = os.path.join(ROOT, "todo-character", "models", "go-emotions", "onnx")
+MODEL_OUT = os.path.join(DOCS, "models", "go-emotions")
+PARTS = 2   # GitHub refuses single files over 100 MB; 2 parts are ~60 MB each
 
 
 def face_and_reader() -> str:
@@ -80,12 +85,50 @@ def icons() -> None:
     from homebot.face.renderer import FaceRenderer
     from homebot.face import expressions
     from homebot.face.params import sanitise
-    face = FaceRenderer((800, 480)).render(sanitise(expressions.get("happy")))
-    square = pygame.Surface((800, 800))
+    # The resting face - his neutral, everyday look - framed so the eyes and
+    # mouth fill the icon instead of floating in a black square.
+    face = FaceRenderer((800, 480)).render(sanitise(expressions.get("rest")))
+    square = pygame.Surface((640, 640))
     square.fill((8, 10, 14))
-    square.blit(face, (0, 160))
+    square.blit(face, (0, 80), pygame.Rect(80, 0, 640, 480))
     for size, name in ((512, "icon-512.png"), (192, "icon-192.png"), (180, "apple-touch-icon.png")):
         pygame.image.save(pygame.transform.smoothscale(square, (size, size)), os.path.join(DOCS, name))
+
+
+def emotion_model() -> None:
+    """Host the emotion model on the site itself, split into parts.
+
+    Same model and files the Python app uses (todo-character/models). The
+    phone downloads the parts from this site, joins them, checks the SHA-256,
+    and keeps the result, so nothing is fetched from anywhere else.
+    """
+    src = os.path.join(MODEL_SRC, "model_quantized.onnx")
+    if not os.path.isfile(src):
+        print("emotion model not found at", src, "- phone build will run on rules only")
+        return
+    os.makedirs(MODEL_OUT, exist_ok=True)
+    blob = open(src, "rb").read()
+    step = -(-len(blob) // PARTS)
+    parts = []
+    for i in range(PARTS):
+        chunk = blob[i * step:(i + 1) * step]
+        name = f"model.part{i + 1}"
+        open(os.path.join(MODEL_OUT, name), "wb").write(chunk)
+        parts.append({"file": name, "size": len(chunk)})
+    for f in ("tokenizer.json", "config.json"):
+        shutil.copyfile(os.path.join(MODEL_SRC, f), os.path.join(MODEL_OUT, f))
+    # The browser tokenizer also wants this small file. Its values are the
+    # standard RoBERTa ones and match tokenizer.json's own special tokens
+    # (<s>=0 <pad>=1 </s>=2 <unk>=3 <mask>=50264, max length 128).
+    json.dump({"tokenizer_class": "RobertaTokenizer", "model_max_length": 128,
+               "bos_token": "<s>", "eos_token": "</s>", "unk_token": "<unk>",
+               "sep_token": "</s>", "cls_token": "<s>", "pad_token": "<pad>",
+               "mask_token": "<mask>", "add_prefix_space": False, "trim_offsets": True},
+              open(os.path.join(MODEL_OUT, "tokenizer_config.json"), "w"), indent=2)
+    json.dump({"name": "go-emotions (int8)", "total": len(blob),
+               "sha256": hashlib.sha256(blob).hexdigest(), "parts": parts,
+               "threshold": 0.45},
+              open(os.path.join(MODEL_OUT, "manifest.json"), "w"), indent=2)
 
 
 def main() -> None:
@@ -103,6 +146,7 @@ def main() -> None:
     io.open(os.path.join(DOCS, "manifest.webmanifest"), "w").write(json.dumps(manifest, indent=2) + "\n")
     io.open(os.path.join(DOCS, ".nojekyll"), "w").close()
     icons()
+    emotion_model()
     print("built", DOCS)
 
 

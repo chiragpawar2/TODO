@@ -1,0 +1,13 @@
+{
+  "tokenizer_class": "RobertaTokenizer",
+  "model_max_length": 128,
+  "bos_token": "<s>",
+  "eos_token": "</s>",
+  "unk_token": "<unk>",
+  "sep_token": "</s>",
+  "cls_token": "<s>",
+  "pad_token": "<pad>",
+  "mask_token": "<mask>",
+  "add_prefix_space": false,
+  "trim_offsets": true
+}

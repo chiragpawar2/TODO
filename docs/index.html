@@ -175,6 +175,11 @@ body{font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothi
 .toggle input{width:18px;height:18px;accent-color:var(--accent)}
 .keystate{margin:8px 0 0;font-size:13.5px;color:var(--fg2)}
 .keystate.ok{color:#2f9e6b}
+.mtrack{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin:10px 0 8px}
+.mtrack i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.mrow{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.mbtn{height:40px;padding:0 16px;border-radius:10px;border:0;background:var(--accent);color:#fff;font:600 14px var(--font);cursor:pointer}
+.mbtn[disabled]{opacity:.5;cursor:default}
 @media (max-width:980px){ .talkpanel{position:sticky;bottom:max(10px,env(safe-area-inset-bottom,0px));z-index:5;box-shadow:0 10px 30px -10px rgba(0,0,0,.35)} }
 @media (prefers-reduced-motion:reduce){.talk.on .dotp{animation:none}}
 
@@ -226,6 +231,13 @@ body{font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothi
         <p class="hint">Uses Google's free Gemini. Get a free key at aistudio.google.com (Get API key) and paste it here. It is saved only on this phone and is never part of the website.</p>
         <form class="say" id="keyform"><input id="key" type="password" autocomplete="off" placeholder="Paste your Gemini API key" aria-label="Gemini API key"><button>Save</button></form>
         <div style="display:flex;align-items:center;gap:8px;justify-content:space-between"><p class="keystate" id="keystate"></p><button class="chip" id="forget" type="button">Forget key</button></div>
+      </div>
+      <div class="panel" id="mpanel">
+        <h3>Emotion model</h3>
+        <p class="hint">Helps his face read everyday English he has no rule for, like "my heart sank". About 120 MB, downloaded once from this site and kept on the phone. Best on Wi-Fi.</p>
+        <div class="mtrack" aria-hidden="true"><i id="mbar"></i></div>
+        <div class="mrow"><span class="keystate" id="mstate">Not downloaded.</span>
+          <span style="display:flex;gap:6px"><button class="mbtn" id="mload" type="button">Download</button><button class="chip" id="mforget" type="button" hidden>Remove</button></span></div>
       </div>
       <div class="panel">
         <h3>Conversation</h3>
@@ -1574,7 +1586,8 @@ function feel(text){
   // Same path as the app: read the line, then play its beats on the face.
   let beats=[]; try{ beats=R.readBeats(text)||[]; }catch(e){}
   const real=beats.filter(b=>b[0]!=="attentive");
-  if(real.length){ F.playSteps(real.map(b=>[b[0],b[4]||1.2,b[2]])); }
+  if(real.length){ F.playSteps(real.map(b=>[b[0],b[4]||1.2,b[2]])); if(typeof mAsk==="function") mTurn++; }
+  else if(typeof mAsk==="function") mAsk(text);   // the reader found nothing: ask the emotion model
   return real;
 }
 /* ---------- speaking: the phone's own voice, mouth in step ---------- */
@@ -1842,6 +1855,45 @@ $("#speakon").checked=speakOn; $("#speakon").onchange=e=>{ speakOn=e.target.chec
 $("#keyform").onsubmit=e=>{ e.preventDefault(); const v=$("#key").value.trim(); if(v){ store.set("hb-gemini-key",v); $("#key").value=""; convo=[]; showKey(); say("Thanks. My brain is connected."); } };
 $("#forget").onclick=()=>{ store.del("hb-gemini-key"); convo=[]; showKey(); };
 showKey();
+
+const MODEL_WORKER="\nimport { AutoTokenizer, env } from \"https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2/dist/transformers.min.js\";\nimport * as ort from \"https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.wasm.min.mjs\";\nlet tok=null, sess=null, labels=null;\nconst CACHE=\"hb-emotion-v1\";\nasync function part(url,size,onBytes){\n  const c=await caches.open(CACHE); const hit=await c.match(url);\n  if(hit){ const b=new Uint8Array(await hit.arrayBuffer()); onBytes(b.length); return b; }\n  const res=await fetch(url); if(!res.ok) throw new Error(\"download failed (\"+res.status+\")\");\n  const rd=res.body.getReader(); const buf=new Uint8Array(size); let off=0;\n  for(;;){ const {done,value}=await rd.read(); if(done) break; buf.set(value,off); off+=value.length; onBytes(off); }\n  if(off!==size) throw new Error(\"the download was cut short\");\n  await c.put(url,new Response(buf)); return buf;\n}\nself.onmessage=async e=>{\n  const m=e.data;\n  if(m.type===\"load\"){\n    try{\n      const base=m.base, man=await (await fetch(base+\"manifest.json\",{cache:\"no-cache\"})).json();\n      const got=man.parts.map(()=>0), tick=()=>self.postMessage({type:\"progress\",loaded:got.reduce((a,b)=>a+b,0),total:man.total});\n      const bufs=[]; for(let i=0;i<man.parts.length;i++){ const p=man.parts[i]; bufs.push(await part(base+p.file,p.size,n=>{got[i]=n;tick();})); }\n      const all=new Uint8Array(man.total); let o=0; for(const b of bufs){ all.set(b,o); o+=b.length; }\n      self.postMessage({type:\"stage\",text:\"Checking\u2026\"});\n      const h=Array.from(new Uint8Array(await crypto.subtle.digest(\"SHA-256\",all))).map(x=>x.toString(16).padStart(2,\"0\")).join(\"\");\n      if(h!==man.sha256){ await caches.delete(CACHE); throw new Error(\"the download was damaged. Tap Download to try again\"); }\n      self.postMessage({type:\"stage\",text:\"Starting\u2026\"});\n      ort.env.wasm.wasmPaths=\"https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/\"; ort.env.wasm.numThreads=1;\n      sess=await ort.InferenceSession.create(all.buffer,{executionProviders:[\"wasm\"]});\n      env.allowRemoteModels=false; env.allowLocalModels=true; env.localModelPath=base.replace(/go-emotions\\/$/,\"\");\n      tok=await AutoTokenizer.from_pretrained(\"go-emotions\");\n      labels=(await (await fetch(base+\"config.json\")).json()).id2label;\n      self.postMessage({type:\"ready\"});\n    }catch(err){ self.postMessage({type:\"error\",text:String(err&&err.message||err)}); }\n  }\n  if(m.type===\"classify\"){\n    if(!sess){ self.postMessage({type:\"result\",id:m.id,label:null,score:0}); return; }\n    try{\n      const enc=tok(m.text,{truncation:true,max_length:128,padding:"max_length"});   // same as tokenizer.json, so results match the Python app\n      const ids=enc.input_ids.data, mask=enc.attention_mask.data, n=ids.length;\n      const out=await sess.run({input_ids:new ort.Tensor(\"int64\",ids,[1,n]),attention_mask:new ort.Tensor(\"int64\",mask,[1,n])});\n      const lg=out[sess.outputNames[0]].data; let best=0; for(let i=1;i<lg.length;i++) if(lg[i]>lg[best]) best=i;\n      self.postMessage({type:\"result\",id:m.id,label:labels[best],score:1/(1+Math.exp(-lg[best]))});\n    }catch(err){ self.postMessage({type:\"result\",id:m.id,label:null,score:0}); }\n  }\n  if(m.type===\"forget\"){ try{ await caches.delete(CACHE); }catch(e){} self.postMessage({type:\"forgotten\"}); }\n};\n";
+/* ---------- emotion model: hosted on this site in 2 parts, run in a worker ----------
+   Same model, labels and 0.45 threshold as todo-character/homebot/face/fallback.py,
+   and the same rule: only for English lines the sentence reader could not place. */
+const M_LABELS={"admiration": "happy", "amusement": "grin", "anger": "angry", "annoyance": "stern", "approval": "content", "caring": "tender", "confusion": "confusion", "curiosity": null, "desire": "happy", "disappointment": "sad", "disapproval": "skeptical", "disgust": "angry", "embarrassment": "shy", "excitement": "delight", "fear": "worried", "gratitude": "tender", "grief": "sad", "joy": "happy", "love": "love", "nervousness": "worried", "optimism": "content", "pride": "proud", "realization": null, "relief": "content", "remorse": "apologetic", "sadness": "sad", "surprise": "surprised", "neutral": null};
+const M_DESI=new Set(["aahe", "aaj", "aala", "aamhi", "aap", "accha", "acha", "achha", "ahe", "ala", "aur", "bahot", "bahut", "bhai", "bhaiya", "bohot", "bura", "didi", "ekdum", "gaya", "gayi", "hai", "hain", "hoon", "hota", "hoti", "hua", "hui", "jhala", "kaay", "kal", "karo", "kasa", "kashi", "kay", "khup", "kya", "kyu", "kyun", "laga", "lagta", "lai", "majha", "mala", "mazha", "mein", "mera", "mere", "meri", "mujhe", "nahi", "nahin", "nako", "nhi", "raha", "rahe", "rahi", "tha", "thi", "toh", "tula", "tum", "tumhe", "tumhi", "vatat", "yaar", "zala"]);
+const M_THRESHOLD=0.45;
+const M_BASE=new URL("models/go-emotions/",location.href).href;
+let mw=null, mReady=false, mBusy=false, mTurn=0, mText="";
+const mSuitable=t=>/^[\x00-\x7F]*$/.test(t)&&(t.toLowerCase().match(/[a-z']+/g)||[]).length>0&&!(t.toLowerCase().match(/[a-z']+/g)||[]).some(w=>M_DESI.has(w));
+const mb=n=>(n/1048576).toFixed(0);
+function mUI(state,text,frac){ $("#mstate").textContent=text; $("#mstate").className="keystate"+(state==="ready"?" ok":"");
+  if(frac!=null) $("#mbar").style.width=Math.round(frac*100)+"%";
+  $("#mload").hidden=state==="ready"; $("#mload").disabled=state==="busy"; $("#mload").textContent=state==="error"?"Try again":"Download";
+  $("#mforget").hidden=state!=="ready"; }
+function mStart(){
+  if(mBusy||mReady) return;
+  if(!("caches" in window)||!window.Worker||!window.crypto||!crypto.subtle){ mUI("error","This browser can't run the model. His face still reads feelings with rules.",0); return; }
+  mBusy=true; mUI("busy","Preparing…",0);
+  try{ mw=new Worker(URL.createObjectURL(new Blob([MODEL_WORKER],{type:"text/javascript"})),{type:"module"}); }
+  catch(e){ mBusy=false; mUI("error","This browser can't run the model.",0); return; }
+  mw.onmessage=e=>{ const m=e.data;
+    if(m.type==="progress") mUI("busy",`Downloading ${mb(m.loaded)} of ${mb(m.total)} MB`,m.loaded/m.total);
+    if(m.type==="stage") mUI("busy",m.text,1);
+    if(m.type==="ready"){ mReady=true; mBusy=false; mUI("ready","Ready. Saved on this phone.",1); }
+    if(m.type==="error"){ mBusy=false; mw.terminate(); mw=null; mUI("error","Couldn't load: "+m.text,0); }
+    if(m.type==="forgotten"){ mw.terminate(); mw=null; mReady=false; mUI("idle","Removed from this phone.",0); }
+    if(m.type==="result"&&m.id===mTurn&&m.label){ const expr=M_LABELS[m.label];
+      if(expr&&m.score>=M_THRESHOLD){ let lvl="mid"; try{ lvl=R.read(mText)[1]||"mid"; }catch(e){}
+        F.playSteps([[expr,1.4,R.levelAmount(expr,lvl)]]); log("bot","(face, from the emotion model: "+m.label+" "+m.score.toFixed(2)+")"); } } };
+  mw.postMessage({type:"load",base:M_BASE});
+}
+// Every new line moves the turn on, so an answer for an older line is ignored.
+function mAsk(text){ mTurn++; mText=text; if(!mReady||!mSuitable(text)) return; mw.postMessage({type:"classify",id:mTurn,text}); }
+$("#mload").onclick=mStart;
+$("#mforget").onclick=()=>{ if(mw) mw.postMessage({type:"forget"}); };
+// Already downloaded once? Load it straight from the phone, no question asked.
+(async()=>{ try{ const c=await caches.open("hb-emotion-v1"); if((await c.keys()).length>=2) mStart(); }catch(e){} })();
 
 let demo=-1;
 function cycle(){ const n=F.names(); demo=(demo+1)%n.length; if(ui.view!=="home") go("home"); F.setX(n[demo]); $("#caption").textContent=`${n[demo]}  (${demo+1}/${n.length})`; }
