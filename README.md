@@ -20,6 +20,21 @@ A home assistant for the family: a character on a small screen, and the lists an
 ./run.sh cli       # text chat
 ```
 
+## Phone app (GitHub Pages)
+
+`docs/` is the phone app that GitHub Pages serves. It is built, never edited by hand:
+
+```bash
+./run.sh phone
+```
+
+The build takes the face and sentence reader from `todo-character/prototypes/homebot-face.html`, unchanged, and the page from `todo-lists/phone/phone_page.html`. On the phone:
+
+- **Tap to talk** in English, Hindi or Marathi (the browser's own speech recognition).
+- He reads how you feel, answers, and **speaks the answer** in the phone's voice with lip sync.
+- **Brain:** Google's free Gemini. Paste a free key from aistudio.google.com into the Brain box; it is stored only on that phone, never in this repo.
+- Lists work by voice or touch and are saved on the phone.
+
 ---
 
 # homebot
