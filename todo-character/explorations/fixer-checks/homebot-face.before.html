@@ -1,0 +1,858 @@
+<title>Homebot Face</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one glowing panel, centred, with its controls directly beneath it.
+   Single-theme on purpose - this is a device screen, not a document. */
+:root{
+  --amber:#d4e7fc; --amber-dim:#4a86c8; --amber-hot:#f8fcff;
+  --panel:#0c0d0f; --bezel:#262629; --bezel-edge:#47484d;
+  --ground:#09090a; --ink:#c9c7c4; --ink-dim:#6d6a67;
+  --font-ui:"Space Grotesk",system-ui,-apple-system,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:var(--font-ui);
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:18px;
+  display:flex; flex-direction:column; align-items:center; gap:14px;
+}
+.wrap{width:100%; max-width:560px; display:flex; flex-direction:column; gap:14px}
+.bezel{
+  background:var(--bezel); border:2px solid var(--bezel-edge);
+  border-radius:26px; padding:12px;
+  box-shadow:0 18px 50px -18px rgba(70,140,255,.40), inset 0 1px 0 rgba(255,255,255,.05);
+}
+.screen{position:relative; border-radius:16px; overflow:hidden; background:var(--panel);
+        aspect-ratio:8/5; touch-action:none; cursor:crosshair}
+canvas{display:block; width:100%; height:100%}
+.scan{position:absolute; inset:0; pointer-events:none;
+  background:repeating-linear-gradient(to bottom,
+    rgba(0,0,0,.42) 0 1px, rgba(0,0,0,.12) 1px 2px, rgba(0,0,0,0) 2px 3px);
+  mix-blend-mode:multiply;
+}
+.vig{position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(130% 110% at 50% 45%, transparent 55%, rgba(0,0,0,.7) 100%)}
+.row{display:flex; gap:8px; flex-wrap:wrap; min-width:0}
+input[type=text]{
+  flex:1 1 180px; min-width:0; padding:11px 14px; border-radius:10px;
+  border:1px solid #34322f; background:#141311; color:var(--amber-hot);
+  font-family:var(--font-mono); font-size:15px;
+}
+input[type=text]::placeholder{color:var(--ink-dim)}
+input:focus-visible,button:focus-visible{outline:2px solid var(--amber); outline-offset:2px}
+button{
+  padding:11px 15px; border-radius:10px; border:1px solid #34322f;
+  background:#1a1917; color:var(--ink); font-family:var(--font-ui);
+  font-size:14px; cursor:pointer;
+}
+button:hover{border-color:var(--amber-dim); color:var(--amber-hot)}
+button.send{background:var(--amber); color:#1a1004; border-color:var(--amber); font-weight:600}
+.chips{display:flex; gap:6px; flex-wrap:wrap}
+.chips button{padding:6px 10px; font-size:12px; font-family:var(--font-mono)}
+.status{font-family:var(--font-mono); font-size:12.5px; color:var(--ink-dim);
+        min-height:2.6em; line-height:1.4}
+.status b{color:var(--amber-hot); font-weight:500}
+h1{font-size:15px; margin:0; letter-spacing:.12em; text-transform:uppercase;
+   color:var(--ink-dim); font-weight:500}
+.note{font-size:12.5px; color:var(--ink-dim); line-height:1.55; margin:0}
+@media (prefers-reduced-motion:reduce){ .bezel{box-shadow:none} }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap">
+
+<div class="wrap">
+  <h1>homebot &mdash; live face</h1>
+  <div class="bezel">
+    <div class="screen" id="screen">
+      <canvas id="c" width="768" height="480"></canvas>
+      <div class="scan"></div><div class="vig"></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <input type="text" id="say" placeholder="say something…" autocomplete="off">
+    <button class="send" id="send">Send</button>
+    <button id="mode" aria-pressed="false">Make him say it</button>
+  </div>
+  <div class="status" id="status">Poke the eyes, the mouth, the forehead. Stroke across it. Poke it five times fast. Or hold an expression and make him talk in it.</div>
+  <div class="chips" id="chips"></div>
+  <p class="note">Mirror of the Python build, for judging on a phone — same 43-float model, same 30 expressions, same beats and idle rates, same nine-shape viseme lip sync. The real one runs on the laptop, wired to the brain.</p>
+</div>
+
+<script>
+const PANEL_W=768, PANEL_H=480;
+const AMBER=[212,231,252];
+
+/* ---- the float space (mirrors homebot/face/params.py) ---- */
+const EYE0={w:1,h:1,radius:.42,x:0,y:0,angle:0,upper_lid:0,upper_angle:0,upper_bend:0,
+            lower_lid:0,lower_angle:0,lower_bend:0,pupil_x:0,pupil_y:0,pupil_scale:1,pupil_alpha:1};
+const FACE0={glow:1,tilt:0,shift_x:0,shift_y:0,scale:1,aberration:1.6,
+             mouth_w:1,mouth_curve:.18,mouth_y:0,mouth_thick:1,mouth_alpha:1,mouth_open:0,mouth_x:0,
+             tear:0,tear_fall:0};
+const EK=Object.keys(EYE0), FK=Object.keys(FACE0);
+const mk=(both={},L={},R={},g={})=>({left:{...EYE0,...both,...L},right:{...EYE0,...both,...R},...FACE0,...g});
+const lerp=(a,b,t)=>a+(b-a)*t;
+function blend(a,b,t){
+  const o={left:{},right:{}};
+  for(const k of EK){o.left[k]=lerp(a.left[k],b.left[k],t); o.right[k]=lerp(a.right[k],b.right[k],t);}
+  for(const k of FK) o[k]=lerp(a[k],b[k],t);
+  return o;
+}
+const clone=p=>({...p,left:{...p.left},right:{...p.right}});
+
+/* ---- the 30 expressions (mirrors expressions.py) ---- */
+const X={
+rest:       mk({h:1,w:1},{},{},{glow:1,mouth_curve:.20,mouth_w:1}),
+listening:  mk({h:1.16,w:1.06,radius:.45},{},{},{glow:1.22,mouth_curve:.34,mouth_w:1.1}),
+thinking:   mk({h:.88,lower_lid:.20,lower_bend:.1,pupil_x:-.52,pupil_y:-.55},{},{},{glow:.85,mouth_curve:.03,mouth_w:.8,mouth_x:-.22,tilt:-2.5}),
+searching:  mk({h:.42,w:1.18,radius:.5,pupil_x:.85,pupil_scale:.9},{},{},{glow:.98,mouth_curve:0,mouth_w:.4}),
+answering:  mk({h:1.02},{},{},{glow:1.12,mouth_curve:.48,mouth_w:1.18}),
+delight:    mk({h:1.22,lower_lid:.46,lower_bend:.46,pupil_alpha:0},{},{},{glow:1.38,mouth_curve:.92,mouth_w:1.3,mouth_thick:1.15}),
+confusion:  mk({},{h:1.22,w:1.05,radius:.5,pupil_x:.42},{h:.70,w:.95,pupil_x:.42,upper_lid:.12},{glow:1,tilt:6,mouth_curve:-.16,mouth_x:.2,mouth_w:.75}),
+apologetic: mk({h:.92,upper_lid:.46,upper_angle:-14,pupil_y:.48},{},{},{glow:.70,mouth_curve:-.30,mouth_y:.03,mouth_w:.82}),
+asleep:     mk({h:.20,w:.98,radius:.5,pupil_alpha:0,upper_bend:.3},{},{},{glow:.34,mouth_curve:.06,mouth_w:.42,mouth_thick:.85}),
+happy:      mk({h:1.08,lower_lid:.40,lower_bend:.40,pupil_alpha:0},{},{},{glow:1.22,mouth_curve:.78,mouth_w:1.2}),
+sad:        mk({h:.95,upper_lid:.32,upper_angle:-11,pupil_y:.36},{},{},{glow:.62,mouth_curve:-.58,mouth_w:.85,mouth_y:.04}),
+angry:      mk({h:.82,upper_lid:.40,upper_angle:19,pupil_scale:.9},{},{},{glow:1.16,mouth_curve:-.38,mouth_w:.78,aberration:3}),
+surprised:  mk({h:1.34,w:1.12,radius:.5,pupil_scale:.66},{},{},{glow:1.30,mouth_open:.85,mouth_w:1.0,mouth_curve:.06}),
+startled:   mk({h:1.44,w:1.16,radius:.5,pupil_scale:.5},{},{},{glow:1.42,shift_y:-5,mouth_open:1,mouth_w:.96,aberration:3.5}),
+love:       mk({h:1.08,pupil_scale:1.12,lower_lid:.12,lower_bend:.12},{},{},{glow:1.28,tilt:3,mouth_curve:.82,mouth_w:1.1}),
+wink:       mk({},{h:1},{h:1.1,upper_lid:.87,upper_bend:-.20,pupil_alpha:0},{glow:1.18,mouth_curve:.62,mouth_x:.16,mouth_w:1}),
+skeptical:  mk({},{h:1.05,upper_lid:.14,pupil_x:.34},{h:.86,upper_lid:.50,upper_angle:11,pupil_x:.34},{glow:1,tilt:-2,mouth_curve:-.12,mouth_x:.2,mouth_w:.7}),
+bored:      mk({h:.95,upper_lid:.44,pupil_x:-.52,pupil_y:.22,pupil_scale:.9},{},{},{glow:.68,mouth_curve:-.08,mouth_w:.66}),
+dizzy:      mk({},{h:1.12,pupil_x:.58,pupil_y:-.42,pupil_scale:.8},{h:1.12,pupil_x:-.55,pupil_y:.45,pupil_scale:.8},{glow:1.1,tilt:8,mouth_curve:-.1,mouth_open:.4,mouth_w:.6,aberration:4}),
+curious:    mk({},{h:1.20,pupil_y:-.2},{h:.94,pupil_y:-.2},{glow:1.1,tilt:-5,mouth_curve:.26,mouth_w:.78}),
+proud:      mk({h:.86,upper_lid:.18,upper_angle:6,pupil_y:-.16},{},{},{glow:1.16,mouth_curve:.52,mouth_w:1.05}),
+worried:    mk({h:.98,upper_lid:.22,upper_angle:-17,pupil_y:.2,pupil_x:.2},{},{},{glow:.80,mouth_curve:-.42,mouth_w:.68,mouth_x:-.1}),
+mischief:   mk({h:.74,upper_lid:.38,upper_angle:13,pupil_x:.46},{},{},{glow:1.14,mouth_curve:.60,mouth_x:.2,mouth_w:.9}),
+shy:        mk({h:.90,upper_lid:.50,upper_angle:-8,pupil_x:-.46,pupil_y:.3},{},{},{glow:.86,tilt:-4,mouth_curve:.30,mouth_w:.58}),
+squint:     mk({h:.46,w:.95,pupil_scale:.85},{},{},{glow:1.05,mouth_curve:.12,mouth_w:.66}),
+focused:    mk({h:.78,w:.90,pupil_scale:.78},{},{},{glow:1.12,mouth_curve:.06,mouth_w:.58}),
+yawn:       mk({h:.86,upper_lid:.68,upper_bend:.2,pupil_y:.3},{},{},{glow:.58,mouth_open:1,mouth_w:.72,mouth_y:.04}),
+waking:     mk({h:.74,upper_lid:.70,upper_bend:.25,pupil_y:.12},{},{},{glow:.56,mouth_curve:.10,mouth_w:.5}),
+glitch:     mk({},{h:.58,w:1.22},{h:1.22,w:.86},{glow:1.2,tilt:-3,aberration:6,mouth_curve:-.05,mouth_w:.9}),
+/* studied from the reference expression sheet: the mouth may vanish, the mouth
+   may be a solid, the eye may stop being an eye, and grief needs a prop. */
+grin:       mk({h:1,lower_lid:.52,lower_bend:.50,pupil_alpha:0},{},{},{glow:1.34,mouth_open:.74,mouth_w:1.52,mouth_curve:.30,mouth_thick:1.1}),
+oh:         mk({h:1.06,pupil_scale:.86},{},{},{glow:1.16,mouth_open:1.15,mouth_w:.48,mouth_curve:-.60,mouth_thick:1.15}),
+dread:      mk({h:.80,w:.94,pupil_scale:.42,pupil_y:.20},{},{},{glow:.92,mouth_open:1.15,mouth_w:.60,mouth_curve:-.50,mouth_y:.02,mouth_thick:1.15,aberration:2.4}),
+suspicious: mk({h:.34,w:1.14,radius:.16,pupil_x:.80,pupil_scale:1.45},{},{},{glow:1.04,mouth_alpha:0,mouth_w:.5,mouth_curve:0}),
+stern:      mk({},{h:.26,w:1.12,radius:.10,angle:10,pupil_alpha:0},{h:.26,w:1.12,radius:.10,angle:-10,pupil_alpha:0},{glow:1.10,mouth_curve:0,mouth_w:.86,mouth_thick:1.15}),
+fret:       mk({},{h:.98,w:1.08,lower_lid:.50,lower_bend:.48,angle:-12,pupil_alpha:0},{h:.98,w:1.08,lower_lid:.50,lower_bend:.48,angle:12,pupil_alpha:0},{glow:.86,mouth_curve:-.46,mouth_w:.62,mouth_y:.03}),
+content:    mk({h:1.06,w:1.06,lower_lid:.56,lower_bend:.54,pupil_alpha:0},{},{},{glow:1.08,mouth_curve:.64,mouth_w:.92}),
+crying:     mk({h:.94,upper_lid:.28,upper_angle:-13,pupil_y:.24,pupil_scale:.88},{},{},{glow:.56,mouth_curve:-.66,mouth_w:.80,mouth_y:.05,tear:1,tear_fall:0}),
+/* studied from the Jibo-family reference: NO MOUTH AT ALL, carried on the
+   half-disc (one flat edge, one curved - bend 0 is what makes it flat) and on
+   TILT, which does the work the missing mouth used to do. */
+tender:     mk({},{h:1.10,w:1.08,lower_lid:.44,lower_bend:0,angle:-14,pupil_alpha:0},{h:1.10,w:1.08,lower_lid:.44,lower_bend:0,angle:14,pupil_alpha:0},{glow:1.18,tilt:2,mouth_alpha:0}),
+alarmed:    mk({},{h:1.10,w:1.08,lower_lid:.44,lower_bend:0,angle:15,pupil_alpha:0},{h:1.10,w:1.08,lower_lid:.44,lower_bend:0,angle:-15,pupil_alpha:0},{glow:1.26,shift_y:-3,mouth_alpha:0,aberration:2.8}),
+peek:       mk({},{h:1.16,w:1.06,radius:.5},{h:1.16,w:1.06,lower_lid:.50,lower_bend:0,pupil_alpha:0},{glow:1.14,tilt:-7,mouth_alpha:0}),
+attentive:  mk({h:1.20,w:1.10,radius:.5,pupil_scale:.80},{},{},{glow:1.10,mouth_alpha:0}),
+drowsy:     mk({h:1.12,w:1.04,upper_lid:.50,upper_bend:0,pupil_y:.42,pupil_scale:.52},{},{},{glow:.66,tilt:5,mouth_alpha:0}),
+};
+
+/* ---- geometry ---- */
+const G={eye_hw:PANEL_W*.142, eye_hh:PANEL_H*.175, gap:PANEL_W*.188,
+         cy:PANEL_H*.44, mouth_y:PANEL_H*.700, mouth_hw:PANEL_W*.112};
+
+function roundedPath(ctx,cx,cy,hw,hh,rf){
+  let r=Math.min(Math.max(0,Math.min(.5,rf))*2*Math.min(hw,hh),hw,hh);
+  ctx.beginPath();
+  if(r<=.5){ctx.rect(cx-hw,cy-hh,hw*2,hh*2);return;}
+  ctx.moveTo(cx-hw+r,cy-hh);
+  ctx.lineTo(cx+hw-r,cy-hh); ctx.arcTo(cx+hw,cy-hh,cx+hw,cy-hh+r,r);
+  ctx.lineTo(cx+hw,cy+hh-r); ctx.arcTo(cx+hw,cy+hh,cx+hw-r,cy+hh,r);
+  ctx.lineTo(cx-hw+r,cy+hh); ctx.arcTo(cx-hw,cy+hh,cx-hw,cy+hh-r,r);
+  ctx.lineTo(cx-hw,cy-hh+r); ctx.arcTo(cx-hw,cy-hh,cx-hw+r,cy-hh,r);
+  ctx.closePath();
+}
+function lidPath(ctx,cx,cy,hw,hh,cover,angle,bend,upper){
+  const pad=hw*.6+6, span=2*hh+4;
+  const edge=upper?(cy-hh-2)+cover*span:(cy+hh+2)-cover*span;
+  const slope=Math.tan(Math.max(-60,Math.min(60,angle))*Math.PI/180);
+  bend=Math.max(-cover,Math.min(cover,bend));            // bend may not exceed cover
+  const bow=bend*hh*1.15*(upper?1:-1);
+  ctx.beginPath();
+  for(let i=0;i<=14;i++){
+    const t=i/14, x=cx-hw-pad+t*(2*hw+2*pad);
+    const y=edge+slope*(x-cx)+bow*Math.sin(Math.PI*t);
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  }
+  const far=upper?(cy-hh-span-10):(cy+hh+span+10);
+  ctx.lineTo(cx+hw+pad,far); ctx.lineTo(cx-hw-pad,far); ctx.closePath();
+}
+
+const layer=document.createElement('canvas'); layer.width=PANEL_W; layer.height=PANEL_H;
+const lx=layer.getContext('2d');
+const tint=[0,1,2].map(()=>{const c=document.createElement('canvas');c.width=PANEL_W;c.height=PANEL_H;return c;});
+const bl=document.createElement('canvas'); bl.width=PANEL_W>>3; bl.height=PANEL_H>>3;
+const bw=document.createElement('canvas'); bw.width=Math.max(1,PANEL_W>>4); bw.height=Math.max(1,PANEL_H>>4);
+
+function drawEye(ctx,e,cx,col){
+  const hw=G.eye_hw*Math.max(.05,e.w), hh=G.eye_hh*Math.max(.03,e.h);
+  const ecx=cx+e.x*G.eye_hw, ecy=G.cy+e.y*G.eye_hh;
+  ctx.save(); ctx.translate(ecx,ecy); ctx.rotate(-e.angle*Math.PI/180);
+  ctx.fillStyle=col; roundedPath(ctx,0,0,hw,hh,e.radius); ctx.fill();
+  ctx.globalCompositeOperation='destination-out';
+  let px=0,py=0,prw=0,prh=0;
+  if(e.pupil_alpha>.01){
+    prw=Math.min(hw*.50*e.pupil_scale,hw*.96); prh=Math.min(hh*.60*e.pupil_scale,hh*.96);
+    px=e.pupil_x*(hw-prw)*.92; py=e.pupil_y*(hh-prh)*.92;
+    if(prw>1&&prh>1){ctx.beginPath();ctx.ellipse(px,py,prw,prh,0,0,6.2832);ctx.fill();}
+  }
+  if(e.upper_lid>.005){lidPath(ctx,0,0,hw,hh,e.upper_lid,e.upper_angle,e.upper_bend,true);ctx.fill();}
+  if(e.lower_lid>.005){lidPath(ctx,0,0,hw,hh,e.lower_lid,e.lower_angle,e.lower_bend,false);ctx.fill();}
+  ctx.globalCompositeOperation='source-over';
+  if(e.pupil_alpha>.01&&prw>1){
+    ctx.fillStyle=`rgba(225,240,255,${.92*e.pupil_alpha})`;
+    ctx.beginPath();ctx.arc(px+prw*.42,py-prh*.44,Math.max(2,prw*.26),0,6.2832);ctx.fill();
+  }
+  ctx.restore();
+}
+/* One tear, under the left eye. A SOLID - no pupil hole - so it reads as a
+   different material from the eye above it even on a small panel. */
+function drawTear(ctx,p,col){
+  if(p.tear<.01) return;
+  const cx=PANEL_W/2-G.gap+G.eye_hw*.30;
+  const cy=G.cy+G.eye_hh*.82+PANEL_H*.16*p.tear_fall;
+  const r=G.eye_hw*.17*p.tear;
+  if(r<1.2) return;
+  const point=r*(2.05-1.15*p.tear_fall);
+  ctx.save();
+  ctx.globalAlpha=Math.min(1,p.tear*(1.25-.45*p.tear_fall));
+  ctx.fillStyle=col; ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx,cy-point);
+  ctx.lineTo(cx-r*.82,cy+r*.12); ctx.lineTo(cx+r*.82,cy+r*.12);
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+
+function drawMouth(ctx,p,col){
+  if(p.mouth_alpha<.02) return;
+  const cx=PANEL_W/2+p.mouth_x*G.mouth_hw, cy=G.mouth_y+p.mouth_y*PANEL_H;
+  const hw=G.mouth_hw*Math.max(.08,p.mouth_w);
+  const th=Math.max(2,PANEL_H*.0255*p.mouth_thick);
+  const a=p.mouth_curve*PANEL_H*.098;
+  const openH=Math.max(0,p.mouth_open)*PANEL_H*.200;
+  ctx.fillStyle=col; ctx.strokeStyle=col;
+  ctx.globalAlpha=Math.max(0,Math.min(1,p.mouth_alpha));
+  const N=72, up=[], lo=[];
+  for(let i=0;i<=N;i++){
+    const t=i/N, x=cx-hw+t*2*hw, u=(x-cx)/Math.max(hw,1e-6);
+    const k=Math.max(0,1-u*u), yu=cy+a*k-a*.5;
+    up.push([x,yu]); lo.push([x,yu+openH*Math.sqrt(k)]);   // sqrt => a true ellipse
+  }
+  if(openH<=th*1.15){
+    // Closed: one stroke that keeps mouth_curve. Round caps, even weight.
+    ctx.lineWidth=th*2; ctx.lineCap='round'; ctx.beginPath();
+    ctx.moveTo(up[0][0],up[0][1]);
+    ctx.quadraticCurveTo(cx,cy+a*1.5,up[N][0],up[N][1]); ctx.stroke();  // a*1.5: a quadratic reaches half way to its control point
+    ctx.globalAlpha=1; return;
+  }
+  // Open: the gap between two arcs, so the upper edge still carries the
+  // expression. A plain ellipse here throws the expression away exactly when
+  // the character starts talking.
+  ctx.beginPath(); ctx.moveTo(up[0][0],up[0][1]);
+  for(const [x,y] of up) ctx.lineTo(x,y);
+  for(let i=N;i>=0;i--) ctx.lineTo(lo[i][0],lo[i][1]);
+  ctx.closePath(); ctx.fill();
+  ctx.globalAlpha=1;
+}
+
+const c=document.getElementById('c'), ctx=c.getContext('2d');
+function render(p){
+  const g=Math.max(0,Math.min(1.6,p.glow));
+  const k=Math.min(1,.55+.45*g);                 // never clip R; the hue must hold
+  const col=`rgb(${AMBER.map(v=>Math.round(v*k)).join(',')})`;
+  lx.clearRect(0,0,PANEL_W,PANEL_H);
+  lx.save();
+  lx.translate(PANEL_W/2+p.shift_x,PANEL_H/2+p.shift_y);
+  lx.rotate(-p.tilt*Math.PI/180); lx.scale(p.scale,p.scale);
+  lx.translate(-PANEL_W/2,-PANEL_H/2);
+  drawEye(lx,p.left,PANEL_W/2-G.gap,col);
+  drawEye(lx,p.right,PANEL_W/2+G.gap,col);
+  drawMouth(lx,p,col);
+  drawTear(lx,p,col);
+  lx.restore();
+
+  ctx.globalCompositeOperation='source-over';
+  ctx.fillStyle='#080a0e'; ctx.fillRect(0,0,PANEL_W,PANEL_H);
+  ctx.globalCompositeOperation='lighter';
+  const ab=Math.round(p.aberration);
+  if(ab>=1){
+    const masks=['#f00','#0f0','#00f'], offs=[-ab,0,ab];
+    for(let i=0;i<3;i++){
+      const t=tint[i].getContext('2d');
+      t.globalCompositeOperation='source-over'; t.clearRect(0,0,PANEL_W,PANEL_H);
+      t.drawImage(layer,0,0);
+      t.globalCompositeOperation='multiply'; t.fillStyle=masks[i]; t.fillRect(0,0,PANEL_W,PANEL_H);
+      t.globalCompositeOperation='destination-in'; t.drawImage(layer,0,0);
+      ctx.drawImage(tint[i],offs[i],0);
+    }
+  } else ctx.drawImage(layer,0,0);
+  // bloom: the glow is tinted, or additive light drags blue to white
+  // The bloom MUST be tinted. The emitter is near-white now, so an untinted
+  // blur just adds more white and the panel loses its colour entirely: on this
+  // face the blue lives in the glow filling the dark scanlines, not in the lit
+  // shape. Matched to BLOOM_TINT in renderer.py.
+  const TINT='rgb(70,140,255)';
+  for(const [cv,alpha] of [[bl,Math.min(.95,.72*g)],[bw,Math.min(.45,.34*g)]]){
+    const c=cv.getContext('2d');
+    c.globalCompositeOperation='source-over';
+    c.clearRect(0,0,cv.width,cv.height);
+    c.drawImage(layer,0,0,cv.width,cv.height);
+    c.globalCompositeOperation='multiply';
+    c.fillStyle=TINT; c.fillRect(0,0,cv.width,cv.height);
+    c.globalCompositeOperation='destination-in';   // keep the blur's own shape
+    c.drawImage(layer,0,0,cv.width,cv.height);
+    c.globalCompositeOperation='source-over';
+    ctx.globalAlpha=alpha; ctx.drawImage(cv,0,0,PANEL_W,PANEL_H);
+  }
+  ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over';
+}
+
+/* ---- acting metadata (mirrors the tables in expressions.py) ----
+   "Do not make every acceleration mathematically even. A living action has
+   designed changes of rate." One shared easing curve for 30 states is exactly
+   what that forbids, so each expression owns its own arrival, idle and voice. */
+// [dur, anticipate, overshoot, snap]
+const BEATS={grin:[.22,.16,.26,0],oh:[.17,0,.22,0],dread:[.46,0,0,.7],suspicious:[.34,.06,0,.9],
+ stern:[.20,.12,.04,.8],fret:[.52,0,.04,0],content:[.62,.05,.06,0],crying:[.95,0,0,0],
+ tender:[.66,.08,.10,0],alarmed:[.12,0,.34,0],peek:[.34,.10,.16,0],
+ attentive:[.30,.05,.08,0],drowsy:[.90,0,0,0],
+ startled:[.10,0,.38,0],surprised:[.14,0,.26,0],glitch:[.06,0,.30,1],
+ delight:[.30,.14,.20,0],happy:[.34,.10,.14,0],love:[.44,.12,.16,0],proud:[.40,.14,.10,0],
+ answering:[.34,.07,.10,0],listening:[.26,.06,.12,0],angry:[.16,.18,.10,.6],
+ mischief:[.26,.12,.12,0],dizzy:[.30,0,.22,0],apologetic:[.70,0,0,0],sad:[.80,0,0,0],
+ worried:[.55,0,.03,0],shy:[.50,0,.04,0],bored:[.75,0,0,0],yawn:[.85,.08,0,0],
+ asleep:[1.7,0,0,0],waking:[1.1,0,.05,0],thinking:[.55,.05,.04,0],confusion:[.46,.09,.12,0],
+ skeptical:[.40,.08,.08,0],curious:[.36,.08,.14,0],searching:[.28,.04,.08,0],
+ focused:[.30,.06,.05,0],squint:[.22,.04,.06,0],rest:[.46,.03,.05,0],wink:[.16,0,.14,0]};
+// [breath_rate, breath_depth, drift, gaze_mag, gaze_rate, blink_rate]
+const IDLES={rest:[2.1,.045,1,.30,1,1],listening:[2.9,.06,.7,.16,1.5,1.3],
+ thinking:[1.5,.055,1.3,.34,2.1,.6],searching:[3.4,.04,.5,.40,2.6,.5],
+ answering:[2.6,.05,.9,.18,1.2,1],delight:[3.6,.085,1.6,.14,1.4,1.4],
+ confusion:[1.9,.055,1.2,.26,1.8,1.1],apologetic:[1.2,.03,.55,.10,.5,.7],
+ asleep:[.9,.30,0,0,0,0],happy:[3.1,.07,1.4,.18,1.3,1.3],sad:[1,.028,.45,.09,.4,.6],
+ angry:[3.3,.035,.75,.07,.4,.2],surprised:[3,.03,.4,.06,.5,.3],startled:[3.8,.03,.35,.05,.4,.2],
+ love:[2.4,.08,1.3,.12,.9,1.2],wink:[2.6,.055,1,.16,1,.8],skeptical:[1.7,.04,.7,.14,.8,.5],
+ bored:[1.1,.035,.8,.40,2.2,.8],dizzy:[2.8,.09,2.2,.30,2.4,1.2],curious:[2.5,.06,1.2,.30,1.9,1.2],
+ proud:[2,.05,.6,.12,.7,.8],worried:[2.3,.045,1.1,.28,1.9,1.4],mischief:[2.7,.06,1.1,.22,1.5,.9],
+ shy:[2.2,.04,.9,.20,1.4,1.3],squint:[2.1,.04,.7,.16,1,.7],focused:[1.8,.035,.45,.08,.5,.5],
+ yawn:[.8,.12,.7,.10,.4,.4],waking:[.9,.09,.8,.16,.7,1.5],glitch:[6,.11,2.6,.50,3.2,.3],
+ grin:[3.8,.095,1.7,.12,1.3,1.4],oh:[3.2,.035,.45,.07,.5,.3],dread:[1.3,.025,.30,.04,.2,.3],
+ suspicious:[3.6,.03,.40,.09,.6,.15],stern:[3.5,.03,.50,.05,.3,.18],fret:[2.4,.05,1.2,.26,2,1.3],
+ content:[1.5,.11,.80,0,0,.25],crying:[.9,.055,.60,.07,.3,1.6],
+ tender:[1.8,.09,.90,.08,.5,.9],alarmed:[3.9,.03,.35,.05,.4,.2],
+ peek:[2.6,.065,1.1,.22,1.6,1],attentive:[2.8,.05,.60,.14,1.1,1.1],
+ drowsy:[1,.13,.70,.10,.5,.5]};
+// [open, width, bob, sway, glow, squint, rate, crisp, accent]
+const TALKS={rest:[.60,1,3,.9,.10,.05,5.2,.50,.50],listening:[.40,.95,2,.5,.08,.03,4.6,.55,.35],
+ answering:[.68,1.12,3.4,1,.12,.06,5,.50,.55],delight:[.86,1.22,6,1.6,.20,.10,6.4,.34,.85],
+ happy:[.76,1.15,5,1.4,.16,.09,6,.38,.75],love:[.66,1.08,3.6,1.8,.15,.07,4.4,.60,.50],
+ proud:[.62,1.05,2.6,.6,.13,.05,4.4,.66,.60],apologetic:[.30,.80,-1.6,.5,.04,.02,3.8,.72,.18],
+ sad:[.26,.78,-1.8,.4,.03,.02,3.4,.76,.14],shy:[.28,.70,-1.2,1.1,.05,.04,4,.68,.20],
+ worried:[.44,.80,2.2,1.3,.07,.08,5.6,.44,.55],angry:[.72,.82,4.4,.4,.17,.14,6.2,.90,.95],
+ skeptical:[.40,.76,1.6,.8,.06,.07,4.2,.70,.45],mischief:[.52,.92,3,1.5,.12,.09,5.8,.62,.70],
+ thinking:[.34,.82,1.4,1.1,.06,.04,3.6,.46,.30],searching:[.26,.60,1,.6,.05,.02,4,.60,.25],
+ confusion:[.46,.80,2,1.9,.07,.05,4.2,.48,.45],curious:[.52,.86,2.8,1.7,.10,.05,5,.52,.55],
+ surprised:[.70,1.05,4,.7,.16,.04,5.4,.40,.80],startled:[.76,1.05,5.2,.9,.18,.04,5.8,.36,.90],
+ dizzy:[.56,.84,3,2.6,.10,.06,4,.42,.40],bored:[.30,.74,.8,.5,.03,.03,3.2,.80,.15],
+ focused:[.44,.74,1.4,.3,.09,.07,4.8,.78,.50],squint:[.40,.72,1.6,.6,.08,.06,5,.68,.45],
+ wink:[.58,1.02,3.2,1.2,.12,.06,5.4,.52,.60],asleep:[.16,.50,.6,.3,.02,0,1.8,.20,.05],
+ yawn:[.90,.80,1,.6,.04,0,1.4,.10,.05],waking:[.30,.62,1,.7,.04,.02,3,.40,.15],
+ glitch:[.60,.95,5,3,.22,.10,9,.95,1],
+ grin:[.95,1.40,7,1.8,.22,.12,6.6,.30,.90],oh:[.80,.68,3.4,.8,.14,.03,4.6,.40,.70],
+ dread:[.46,.66,1,.4,.05,.10,6,.74,.30],suspicious:[.34,.60,1.2,.5,.06,.09,4.4,.82,.75],
+ stern:[.52,.76,2,.2,.09,.12,5,.95,.85],fret:[.44,.78,2.2,1.4,.06,.05,5.6,.48,.45],
+ content:[.48,.92,1.8,1,.08,.02,3.6,.26,.30],crying:[.42,.74,-2.2,2,.05,.08,3.2,.34,.55],
+ // these five have no mouth: speaking has to GROW one, so all open narrow
+ tender:[.40,.84,1.6,1.3,.10,.03,3.8,.30,.35],alarmed:[.70,.92,4.6,.7,.16,.06,6.2,.40,.85],
+ peek:[.46,.88,2.6,1.1,.11,.05,5.2,.46,.65],attentive:[.44,.90,2.2,.7,.10,.04,5,.50,.45],
+ drowsy:[.26,.66,.8,.9,.03,.01,2.8,.24,.12]};
+const Bd=[.42,0,0,0], Id=[2.1,.045,1,.22,1,1], Td=[.62,1,3,.9,.10,.05,5.2,.50,.50];
+const getB=n=>BEATS[n]||Bd, getI=n=>IDLES[n]||Id, getT=n=>TALKS[n]||Td;
+
+/* Progress reshaped into an acted move. Goes BELOW 0 while anticipating and
+   ABOVE 1 while overshooting; the blend extrapolates, so the face really does
+   pull back before it strikes. */
+function actCurve(u,antic,over,snap){
+  u=Math.max(0,Math.min(1,u));
+  if(snap>.001) u=Math.min(1,u/Math.max(1e-6,1-.92*snap));
+  const aEnd=antic>.001?.24:0;
+  if(u<aEnd) return -antic*smooth(u/aEnd);
+  if(over>.001){
+    const peak=aEnd+(1-aEnd)*.66;
+    if(u<peak) return -antic+(1+over+antic)*smooth((u-aEnd)/(peak-aEnd));
+    return (1+over)+(1-(1+over))*smooth((u-peak)/(1-peak));
+  }
+  return -antic+(1+antic)*smooth((u-aEnd)/Math.max(1e-6,1-aEnd));
+}
+/* Channel groups advance on slightly different clocks, so the face arrives as
+   a chain: eye shape leads, pupils follow, then the mouth, then glow and tilt. */
+const SHAPE=["w","h","radius","x","y","angle","upper_lid","upper_angle","upper_bend",
+             "lower_lid","lower_angle","lower_bend"], PUP=["pupil_x","pupil_y","pupil_scale","pupil_alpha"],
+      MOU=["mouth_w","mouth_curve","mouth_y","mouth_thick","mouth_alpha","mouth_open","mouth_x"],
+      GLO=["glow","tilt","shift_x","shift_y","scale","aberration"];
+const LAG_P=.05, LAG_M=.13, LAG_G=.19;
+function blendCh(a,b,ts,tp,tm,tg){
+  const o={left:{},right:{}};
+  for(const side of["left","right"]){
+    for(const k of SHAPE) o[side][k]=lerp(a[side][k],b[side][k],ts);
+    for(const k of PUP)   o[side][k]=lerp(a[side][k],b[side][k],tp);
+  }
+  for(const k of MOU) o[k]=lerp(a[k],b[k],tm);
+  for(const k of GLO) o[k]=lerp(a[k],b[k],tg);
+  return o;
+}
+function sanitise(p){
+  for(const s of[p.left,p.right]){
+    s.w=Math.max(.04,s.w); s.h=Math.max(.02,s.h);
+    s.radius=Math.max(0,Math.min(.5,s.radius));
+    s.upper_lid=Math.max(0,Math.min(1,s.upper_lid));
+    s.lower_lid=Math.max(0,Math.min(1,s.lower_lid));
+    s.pupil_alpha=Math.max(0,Math.min(1,s.pupil_alpha));
+    s.pupil_scale=Math.max(0,s.pupil_scale);
+    s.pupil_x=Math.max(-1,Math.min(1,s.pupil_x)); s.pupil_y=Math.max(-1,Math.min(1,s.pupil_y));
+  }
+  p.glow=Math.max(0,p.glow); p.mouth_open=Math.max(0,Math.min(1.2,p.mouth_open));
+  p.mouth_w=Math.max(.05,p.mouth_w); p.aberration=Math.max(0,p.aberration);
+  p.tear=Math.max(0,Math.min(1,p.tear)); p.tear_fall=Math.max(0,Math.min(1,p.tear_fall));
+  return p;
+}
+
+/* ---- lip sync: a real viseme track (mirrors visemes.py) ----------------
+   Shapes are the six basic Hanna-Barbera mouths plus Rhubarb's three extended
+   ones. No audio, so this is the standard text-only chain: grapheme-to-phoneme,
+   then phoneme-to-viseme. Rule-based G2P, which is wrong on English's
+   irregular spellings and exactly right on Devanagari, which is phonetic.
+   Two things make it read as speech: the mouth CLOSES between words, and cues
+   are cosine-blended over ~70ms rather than cut - which supplies the
+   in-between shape Rhubarb inserts by hand (its "Hi" is X D C B X, where C is
+   there only to smooth D into B).                                        */
+// shape -> [open, width, isVowel]
+const VS={X:[0,1,0],A:[0,.90,0],B:[.22,1.06,0],C:[.58,.92,1],D:[1,.84,1],
+          E:[.50,.66,1],F:[.44,.42,1],G:[.14,.84,0],H:[.70,.88,1]};
+const VD={X:.09,A:.07,B:.075,C:.125,D:.145,E:.125,F:.13,G:.085,H:.115};
+const BLEND=.070, WORD_GAP=.055, COMMA_PAUSE=.20, STOP_PAUSE=.34;
+
+/* ---- pronunciation (mirrors pronounce.py) -----------------------------
+   Letters do not predict English pronunciation, and numbers are not letters
+   at all: "I have 25 books" used to produce NO mouth for the 25, so the face
+   silently skipped a word the voice was saying. The chain is now
+   text -> normalise -> words -> phonemes -> visemes. */
+
+const ONES=["zero","one","two","three","four","five","six","seven","eight","nine","ten",
+ "eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"];
+const TENS=["","","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"];
+const ORD={one:"first",two:"second",three:"third",five:"fifth",eight:"eighth",nine:"ninth",twelve:"twelfth"};
+const under100=n=>n<20?[ONES[n]]:[TENS[(n/10)|0]].concat(n%10?[ONES[n%10]]:[]);
+const under1000=n=>{const h=(n/100)|0,r=n%100,o=[];if(h)o.push(ONES[h],"hundred");if(r)o.push(...under100(r));return o;};
+function numWords(n){
+  if(n<0) return ["minus"].concat(numWords(-n));
+  if(n===0) return ["zero"];
+  let o=[];
+  for(const [v,name] of [[1e9,"billion"],[1e6,"million"],[1e3,"thousand"]])
+    if(n>=v){ o.push(...under1000(Math.floor(n/v)),name); n%=v; }
+  if(n) o.push(...under1000(n));
+  return o;
+}
+function ordWords(n){const w=numWords(n),l=w[w.length-1];
+  w[w.length-1]=ORD[l]||(l.endsWith("y")?l.slice(0,-1)+"tieth":l+"th"); return w;}
+const SYM={"%":["percent"],"&":["and"],"@":["at"],"+":["plus"],"=":["equals"],
+ "\u00b0":["degrees"],"#":["number"],"/":["slash"],"\u20b9":["rupees"],"$":["dollars"],
+ "\u20ac":["euros"],"\u00a3":["pounds"]};
+const ABB={rs:["rupees"],dr:["doctor"],mr:["mister"],mrs:["missus"],ms:["miss"],
+ vs:["versus"],etc:["etcetera"],am:["ay","em"],pm:["pee","em"],kg:["kilos"],
+ km:["kilometres"],ok:["okay"],tv:["tee","vee"]};
+
+function normalise(text){
+  const out=[];
+  for(let raw of String(text).split(/\s+/)){
+    if(!raw) continue;
+    let trail="";
+    while(raw && ".,!?;:".includes(raw[raw.length-1]) && !/^\d+\.\d/.test(raw)){
+      trail=raw[raw.length-1]+trail; raw=raw.slice(0,-1);
+    }
+    if(!raw){ out.push(trail); continue; }
+    const tok=raw.replace(/^["'(\[]+|["')\]]+$/g,""), low=tok.toLowerCase().replace(/\.$/,"");
+    let m;
+    if((m=/^(\d{1,2}):(\d{2})$/.exec(tok))){
+      const h=+m[1], mi=+m[2];
+      out.push(...numWords(h));
+      if(mi===0) out.push("oh","clock");
+      else if(mi<10) out.push("oh",...numWords(mi));
+      else out.push(...numWords(mi));
+    } else if((m=/^(\d+)(st|nd|rd|th)$/i.exec(tok))){ out.push(...ordWords(+m[1]));
+    } else if((m=/^(\d+)\.(\d+)$/.exec(tok))){
+      out.push(...numWords(+m[1]),"point",...[...m[2]].map(d=>ONES[+d]));
+    } else if(/^\d[\d,]*$/.test(tok)){
+      const n=+tok.replace(/,/g,"");
+      // a four-digit number in a sentence is read as a year, in pairs
+      if(n>=1100&&n<=2099&&tok.length===4){
+        out.push(...under100((n/100)|0));
+        const r=n%100;
+        if(r===0) out.push("hundred"); else if(r<10) out.push("oh",...numWords(r)); else out.push(...numWords(r));
+      } else out.push(...numWords(n));
+    } else if("\u20b9$\u20ac\u00a3".includes(tok[0]) && /^\d[\d,]*$/.test(tok.slice(1))){
+      out.push(...SYM[tok[0]],...numWords(+tok.slice(1).replace(/,/g,"")));
+    } else if(ABB[low]){ out.push(...ABB[low]);
+    } else if([...tok].some(c=>SYM[c])){
+      for(const part of tok.match(/\d+|[A-Za-z]+|./g)||[]){
+        if(SYM[part]) out.push(...SYM[part]);
+        else if(/^\d+$/.test(part)) out.push(...numWords(+part));
+        else if(/^[A-Za-z]+$/.test(part)) out.push(part);
+      }
+    } else out.push(tok);
+    if(trail) out.push(trail);
+  }
+  return out.filter(Boolean);
+}
+
+/* The lexicon carries the irregular high-frequency words, which is where
+   nearly all of English's error lives. CMUdict would replace it wholesale -
+   lookup() is the seam. */
+const LEX={"a":"AH","the":"DH AH","to":"T UW","do":"D UW","does":"D AH Z","done":"D AH N","of":"AH V","off":"AO F","one":"W AH N","two":"T UW","three":"TH R IY","four":"F AO R","five":"F AY V","six":"S IH K S","seven":"S EH V AH N","eight":"EY T","nine":"N AY N","ten":"T EH N","eleven":"IH L EH V AH N","twelve":"T W EH L V","twenty":"T W EH N T IY","thirty":"TH ER T IY","forty":"F AO R T IY","fifty":"F IH F T IY","hundred":"HH AH N D R AH D","thousand":"TH AW Z AH N D","million":"M IH L Y AH N","zero":"Z IH R OW","point":"P OY N T","rupees":"R UW P IY Z","percent":"P ER S EH N T","i":"AY","you":"Y UW","your":"Y AO R","he":"HH IY","she":"SH IY","we":"W IY","they":"DH EY","them":"DH EH M","their":"DH EH R","there":"DH EH R","these":"DH IY Z","those":"DH OW Z","this":"DH IH S","that":"DH AE T","what":"W AH T","who":"HH UW","where":"W EH R","when":"W EH N","why":"W AY","how":"HH AW","which":"W IH CH","was":"W AH Z","were":"W ER","are":"AA R","is":"IH Z","been":"B IH N","have":"HH AE V","has":"HH AE Z","had":"HH AE D","said":"S EH D","says":"S EH Z","say":"S EY","come":"K AH M","came":"K EY M","some":"S AH M","none":"N AH N","could":"K UH D","would":"W UH D","should":"SH UH D","through":"TH R UW","though":"DH OW","thought":"TH AO T","tough":"T AH F","rough":"R AH F","enough":"IH N AH F","cough":"K AO F","laugh":"L AE F","daughter":"D AO T ER","eye":"AY","eyes":"AY Z","buy":"B AY","by":"B AY","women":"W IH M AH N","woman":"W UH M AH N","water":"W AO T ER","many":"M EH N IY","any":"EH N IY","again":"AH G EH N","friend":"F R EH N D","people":"P IY P AH L","busy":"B IH Z IY","business":"B IH Z N AH S","minute":"M IH N AH T","knight":"N AY T","know":"N OW","knew":"N UW","knee":"N IY","write":"R AY T","wrong":"R AO NG","wrap":"R AE P","hour":"AW ER","honest":"AA N AH S T","honour":"AA N ER","island":"AY L AH N D","listen":"L IH S AH N","castle":"K AE S AH L","often":"AO F AH N","answer":"AE N S ER","sword":"S AO R D","school":"S K UW L","chaos":"K EY AA S","character":"K EH R IH K T ER","machine":"M AH SH IY N","chef":"SH EH F","ocean":"OW SH AH N","sure":"SH UH R","sugar":"SH UH G ER","question":"K W EH S CH AH N","nature":"N EY CH ER","picture":"P IH K CH ER","phone":"F OW N","photo":"F OW T OW","graph":"G R AE F","rhythm":"R IH DH AH M","wednesday":"W EH N Z D EY","colonel":"K ER N AH L","once":"W AH N S","only":"OW N L IY","other":"AH DH ER","another":"AH N AH DH ER","mother":"M AH DH ER","father":"F AA DH ER","brother":"B R AH DH ER","very":"V EH R IY","every":"EH V R IY","city":"S IH T IY","baby":"B EY B IY","happy":"HH AE P IY","family":"F AE M AH L IY","my":"M AY","me":"M IY","be":"B IY","see":"S IY","go":"G OW","no":"N OW","so":"S OW","now":"N AW","new":"N UW","put":"P UH T","push":"P UH SH","pull":"P UH L","full":"F UH L","good":"G UH D","book":"B UH K","books":"B UH K S","look":"L UH K","foot":"F UH T","food":"F UW D","blood":"B L AH D","door":"D AO R","floor":"F L AO R","poor":"P UH R","heart":"HH AA R T","heard":"HH ER D","learn":"L ER N","earth":"ER TH","early":"ER L IY","world":"W ER L D","work":"W ER K","word":"W ER D","worth":"W ER TH","great":"G R EY T","break":"B R EY K","steak":"S T EY K","bread":"B R EH D","head":"HH EH D","ready":"R EH D IY","dead":"D EH D","death":"D EH TH","health":"HH EH L TH","please":"P L IY Z","thank":"TH AE NG K","thanks":"TH AE NG K S","yes":"Y EH S","okay":"OW K EY","hello":"HH AH L OW","today":"T AH D EY","tomorrow":"T AH M AA R OW","yesterday":"Y EH S T ER D EY","morning":"M AO R N IH NG","night":"N AY T","light":"L AY T","right":"R AY T","might":"M AY T","high":"HH AY","sign":"S AY N","half":"HH AE F","calm":"K AA M","palm":"P AA M","talk":"T AO K","walk":"W AO K","call":"K AO L","ball":"B AO L","small":"S M AO L","all":"AO L","also":"AO L S OW","climb":"K L AY M","comb":"K OW M","lamb":"L AE M","doubt":"D AW T","debt":"D EH T","subtle":"S AH T AH L","science":"S AY AH N S","scene":"S IY N","scissors":"S IH Z ER Z","use":"Y UW Z","used":"Y UW Z D","usually":"Y UW ZH AH L IY","beautiful":"B Y UW T AH F AH L","europe":"Y UH R AH P","give":"G IH V","live":"L IH V","love":"L AH V","above":"AH B AH V","move":"M UW V","prove":"P R UW V","lose":"L UW Z","close":"K L OW Z","whose":"HH UW Z","shoe":"SH UW","true":"T R UW","blue":"B L UW","chapati":"CH AH P AA T IY","namaste":"N AH M AH S T EY","india":"IH N D IY AH","aai":"AA IY"};
+const LEXICON={}; for(const k in LEX) LEXICON[k]=LEX[k].split(" ");
+const lookup=w=>LEXICON[w.toLowerCase()]||null;
+
+const RULES=[["ough","AH F"],["augh","AE F"],["tion","SH AH N"],["sion","ZH AH N"],
+ ["ture","CH ER"],["ight","AY T"],["tch","CH"],["dge","JH"],["ck","K"],["qu","K W"],
+ ["sch","S K"],["ph","F"],["gh",""],["kn","N"],["wr","R"],["wh","W"],["ch","CH"],
+ ["sh","SH"],["th","TH"],["ng","NG"],["ee","IY"],["ea","IY"],["ie","IY"],["ei","EY"],
+ ["oo","UW"],["ou","AW"],["ow","AW"],["oi","OY"],["oy","OY"],["au","AO"],["aw","AO"],
+ ["ai","EY"],["ay","EY"],["oa","OW"],["oe","OW"],["ar","AA R"],["er","ER"],["ir","ER"],
+ ["ur","ER"],["or","AO R"]];
+const LETTER={a:"AE",b:"B",c:"K",d:"D",e:"EH",f:"F",g:"G",h:"HH",i:"IH",j:"JH",k:"K",
+ l:"L",m:"M",n:"N",o:"AA",p:"P",q:"K",r:"R",s:"S",t:"T",u:"AH",v:"V",w:"W",x:"K S",y:"Y",z:"Z"};
+const LONG={a:"EY",e:"IY",i:"AY",o:"OW",u:"UW"};
+const VOW="aeiou";
+function rulePhonemes(word){
+  let w=word.toLowerCase();
+  const magic=w.length>3&&w.endsWith("e")&&!VOW.includes(w[w.length-2])&&[...w.slice(0,-2)].some(c=>VOW.includes(c));
+  if(magic) w=w.slice(0,-1);
+  if(w.length>1&&(w.endsWith("y")||w.endsWith("i"))) w=w.slice(0,-1)+(w.length<=3?"\u0001":"\u0002");
+  let lastV=-1; for(let k=w.length-1;k>=0;k--) if(VOW.includes(w[k])){lastV=k;break;}
+  const out=[]; let i=0;
+  outer: while(i<w.length){
+    if(w[i]==="\u0001"){out.push("AY");i++;continue;}
+    if(w[i]==="\u0002"){out.push("IY");i++;continue;}
+    for(const [seq,ph] of RULES) if(w.startsWith(seq,i)){ if(ph) out.push(...ph.split(" ")); i+=seq.length; continue outer; }
+    const c=w[i];
+    if(VOW.includes(c)&&magic&&lastV===i) out.push(LONG[c]);
+    else if(/[a-z]/.test(c)) out.push(...LETTER[c].split(" "));
+    i++;
+  }
+  return out.filter((p,j)=>j===0||p!==out[j-1]);
+}
+function phonemes(word){
+  const hit=lookup(word); if(hit) return hit.slice();
+  const core=word.replace(/[^A-Za-z]/g,""); return core?rulePhonemes(core):[];
+}
+
+/* ARPAbet -> viseme. This half IS solved: given a phoneme the mouth shape is
+   not in doubt. Diphthongs get TWO cues because they are two positions -
+   which is why Rhubarb writes "Hi" as D then B. */
+const PHON={P:["A"],B:["A"],M:["A"],F:["G"],V:["G"],L:["H"],
+ W:["F"],UW:["F"],UH:["F"],R:["E"],ER:["E"],AO:["E"],
+ AA:["D"],AE:["D"],AH:["C"],EH:["C"],IH:["B"],IY:["B"],
+ AY:["D","B"],AW:["D","F"],EY:["C","B"],OW:["E","F"],OY:["E","B"],
+ T:["B"],D:["B"],N:["B"],S:["B"],Z:["B"],K:["B"],G:["B"],NG:["B"],Y:["B"],
+ CH:["B"],JH:["B"],SH:["B"],ZH:["B"],TH:["B"],DH:["B"],HH:[]};
+
+function english(word){
+  const out=[];
+  for(const ph of phonemes(word)) out.push(...(PHON[ph]||["B"]));
+  return out.filter((s,j)=>j===0||s!==out[j-1]);
+}
+const DV={"अ":"C","आ":"D","इ":"B","ई":"B","उ":"F","ऊ":"F",
+ "ए":"C","ऐ":"C","ओ":"E","औ":"F","ऋ":"E"};
+const DM={"ा":"D","ि":"B","ी":"B","ु":"F","ू":"F","ृ":"E",
+ "े":"C","ै":"C","ो":"E","ौ":"F"};
+const DC={"प":"A","फ":"G","ब":"A","भ":"A","म":"A",
+ "व":"G","ल":"H","ळ":"H","र":"E"};
+const VIRAMA="्";
+function devanagari(word){
+  const ch=[...word], out=[];
+  for(let i=0;i<ch.length;i++){
+    const c=ch[i], nx=ch[i+1]||"";
+    if(DV[c]) out.push(DV[c]);
+    else if(DM[c]) out.push(DM[c]);
+    else if(c==="ं"||c==="ँ") out.push("A");
+    else if((c>="क"&&c<="ह")||(c>="क़"&&c<="य़")){
+      out.push(DC[c]||"B");
+      if(nx!==VIRAMA&&!DM[nx]) out.push("C");     // inherent short 'a'
+    }
+  }
+  // Marathi and Hindi drop the word-final inherent vowel: "namaskaar".
+  if(out.length>2&&out[out.length-1]==="C") out.pop();
+  return out.filter((s,j)=>j===0||s!==out[j-1]);
+}
+const wordShapes=w=>/[ऀ-ॿ]/.test(w)?devanagari(w):english(w);
+
+class VisemeTrack{
+  constructor(text,rate,crisp){
+    const speed=Math.max(.45,Math.min(2.2,rate/5.2));
+    const hold=(1-.28*Math.max(0,Math.min(1,crisp)))/speed;
+    let t=.10; this.cues=[{t0:0,t1:t,shape:"X",stress:.5}]; this.words=[];
+    const push=(shape,d)=>{
+      const last=this.cues[this.cues.length-1];
+      if(last&&last.shape===shape) last.t1+=d;    // a held shape is one cue
+      else this.cues.push({t0:t,t1:t+d,shape,stress:.5});
+      t+=d;
+    };
+    // Say the text the way a voice would say it BEFORE looking for mouth
+    // shapes. Devanagari is already phonetic, so it passes through untouched.
+    const toks=[];
+    for(const raw of text.split(/\s+/).filter(Boolean)){
+      if(/[\u0900-\u097f]/.test(raw)) toks.push(raw);
+      else { const sp=normalise(raw); toks.push(...(sp.length?sp:[raw])); }
+    }
+    for(const tok of toks){
+      const letters=tok.replace(/[^\wऀ-ॿ]/g,"");
+      let shapes=letters?wordShapes(letters):[];
+      // Every token must produce something; a word is never silently dropped.
+      if(letters&&!shapes.length) shapes=["C"];
+      if(letters) this.words.push(letters);
+      for(const sh of shapes) push(sh,VD[sh]*hold);
+      const tail=tok.slice(-1);
+      push("X", ",;:".includes(tail)?COMMA_PAUSE
+               :".!?।".includes(tail)?STOP_PAUSE:WORD_GAP);
+    }
+    push("X",.18);
+    this.duration=t;
+    let want=true;                                 // first vowel of a word = the beat
+    for(const c of this.cues){
+      if(c.shape==="X"){want=true;continue;}
+      if(want&&VS[c.shape][2]){c.stress=1;want=false;}
+    }
+  }
+  at(t){
+    let lo=0,hi=this.cues.length-1;
+    while(lo<hi){const m=(lo+hi)>>1; if(this.cues[m].t1<=t) lo=m+1; else hi=m;}
+    const cur=this.cues[lo], nxt=this.cues[Math.min(lo+1,this.cues.length-1)];
+    const span=Math.min(BLEND,(cur.t1-cur.t0)*.9); let k=0;
+    if(span>0&&t>cur.t1-span){
+      k=(t-(cur.t1-span))/span;
+      k=.5-.5*Math.cos(Math.PI*Math.max(0,Math.min(1,k)));
+    }
+    return [cur,nxt,k];
+  }
+  mouth(t){
+    if(t<0||t>this.duration) return [0,1];
+    const [c,n,k]=this.at(t);
+    return [VS[c.shape][0]+(VS[n.shape][0]-VS[c.shape][0])*k,
+            VS[c.shape][1]+(VS[n.shape][1]-VS[c.shape][1])*k];
+  }
+  energy(t){ return Math.max(0,Math.min(1,this.mouth(t)[0]/.95)); }
+  accent(t){
+    let o=0;
+    for(const c of this.cues){ if(c.stress<.9) continue;
+      const x=t-c.t0; if(x>=0&&x<.26) o=Math.max(o,(1-x/.26)**2); }
+    return o;
+  }
+  breath(t){ return Math.sin(Math.PI*Math.max(0,Math.min(1,t/this.duration))*2); }
+}
+
+/* ---- animator: tween + idle life + touch (mirrors animator.py) ---- */
+const MACRO=.42, smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
+const now=()=>performance.now()/1000;
+let cur=clone(X.rest), from=clone(X.rest), to=clone(X.rest), t0=now(), bt=getB('rest');
+let base='rest', overlay=null, overlayUntil=0;
+let nextBlink=now()+3, blinking=false, blinkT=0;
+let nextGaze=now()+2, gaze=[0,0], gazeFrom=[0,0], gazeT=now();
+let lookAt=null, lookUntil=0, pokes=[], pressAt=null, pressT=0, drag=0;
+let utt=null, uttT0=0;
+
+function begin(n,d){from=clone(cur); to=clone(X[n]||X.rest); const b=getB(n);
+  bt=[d!=null?Math.max(.02,d):b[0],b[1],b[2],b[3]]; t0=now();}
+function setX(n,d){base=n; if(!overlay) begin(n,d);}
+function flash(n,hold=1.1,d){overlay=n; overlayUntil=now()+hold; begin(n,d);}
+function speak(text){const t=getT(base); utt=new VisemeTrack(text,t[6],t[7]); uttT0=now();
+  return utt.duration;}
+
+const R={
+ left_eye:[PANEL_W/2-G.gap,G.cy,G.eye_hw*1.25,G.eye_hh*1.25],
+ right_eye:[PANEL_W/2+G.gap,G.cy,G.eye_hw*1.25,G.eye_hh*1.25],
+ mouth:[PANEL_W/2,G.mouth_y,G.mouth_hw*1.9,PANEL_H*.085],
+ forehead:[PANEL_W/2,PANEL_H*.10,PANEL_W*.5,PANEL_H*.13],
+ cheek_left:[PANEL_W*.14,PANEL_H*.62,PANEL_W*.16,PANEL_H*.2],
+ cheek_right:[PANEL_W*.86,PANEL_H*.62,PANEL_W*.16,PANEL_H*.2]};
+function regionAt(x,y){
+  for(const [n,[cx,cy,rx,ry]] of Object.entries(R))
+    if(((x-cx)/rx)**2+((y-cy)/ry)**2<=1) return n;
+  return 'panel';
+}
+function lookTo(x,y,hold=1.6){
+  lookAt=[Math.max(-1,Math.min(1,(x-PANEL_W/2)/(PANEL_W/2))),
+          Math.max(-1,Math.min(1,(y-G.cy)/(PANEL_H/2)))];
+  lookUntil=now()+hold;
+}
+function touchDown(x,y){
+  const t=now(), region=regionAt(x,y);
+  pressAt=[x,y]; pressT=t; drag=0;
+  // Waking it must never count as a poke, or being woken reads as annoyance.
+  if(base==='asleep'){pokes=[]; flash('startled',.7); setX('waking'); return 'wake';}
+  pokes=pokes.filter(q=>t-q<2.4); pokes.push(t);
+  if(pokes.length>=5){pokes=[]; flash('dizzy',1.6); return 'dizzy';}
+  if(pokes.length===4){flash('angry',1); return 'annoyed';}
+  const map={left_eye:'squint',right_eye:'wink',mouth:'surprised',
+             forehead:'confusion',cheek_left:'shy',cheek_right:'shy',panel:'curious'};
+  flash(map[region],.9); lookTo(x,y,1.8);
+  return map[region];
+}
+function update(){
+  const t=now();
+  if(overlay&&t>=overlayUntil){overlay=null; begin(base);}
+
+  // 1 + 2: this expression's own beat, staggered across channels.
+  const e=t-t0, ch=l=>actCurve((e-bt[0]*l)/bt[0],bt[1],bt[2],bt[3]);
+  cur=blendCh(from,to,ch(0),ch(LAG_P),ch(LAG_M),ch(LAG_G));
+  const p=clone(cur), I=getI(base);
+
+  // 3: idle life, at this expression's own rate.
+  if(!blinking&&t>=nextBlink&&base!=='asleep'&&I[5]>.01){blinking=true;blinkT=t;}
+  if(blinking){
+    const el=t-blinkT, CL=.12, OP=.09;
+    if(el>=CL+OP){blinking=false; nextBlink=t+(2.8+Math.random()*3.7)/Math.max(.05,I[5]);}
+    else{
+      const a=Math.max(0,Math.min(1,el<CL?el/CL:1-(el-CL)/OP));
+      for(const k of['left','right']){
+        p[k].upper_lid=Math.max(p[k].upper_lid,a*.97); p[k].pupil_alpha*=1-a*.9;}
+    }
+  }
+  let gx,gy;
+  if(lookAt&&t<lookUntil){[gx,gy]=lookAt;}
+  else{
+    lookAt=null;
+    if(t>=nextGaze){
+      gazeFrom=gaze; const m=I[3];
+      gaze=[(Math.random()*2-1)*m,(Math.random()*2-1)*m*.6];
+      gazeT=t; nextGaze=t+(1.2+Math.random()*2.2)/Math.max(.05,I[4]);
+    }
+    // Under 80ms, then dead still. Easing it makes the eye swim.
+    const st=Math.min(1,(t-gazeT)/.07);
+    gx=gazeFrom[0]+(gaze[0]-gazeFrom[0])*st; gy=gazeFrom[1]+(gaze[1]-gazeFrom[1])*st;
+  }
+  if(base!=='asleep') for(const k of['left','right']){p[k].pupil_x+=gx; p[k].pupil_y+=gy;}
+
+  p.glow*=1+I[1]*Math.sin(t*I[0]);
+  if(base==='asleep') p.shift_y+=2.2*Math.sin(t*I[0]);
+  else{p.shift_x+=1.3*I[2]*Math.sin(t*.37); p.shift_y+=1.0*I[2]*Math.sin(t*.29+1.2);}
+
+  // A tear is the only part of this face with its own clock: it wells up,
+  // hangs, falls and is gone. A tear frozen at one size is a sticker.
+  if(p.tear>.01){
+    const u=(t%4.6)/4.6;
+    if(u<.42){ p.tear*=u/.42; p.tear_fall=0; }
+    else if(u<.56){ p.tear_fall=0; }
+    else { const f=(u-.56)/.44; p.tear_fall=f*f; p.tear*=Math.max(0,1-f*.55); }
+  }
+
+  // 4: speech, spent across the WHOLE face - mouth, head, tilt, glow, eyes.
+  if(utt){
+    const st=t-uttT0;
+    if(st>utt.duration) utt=null;
+    else{
+      const T=getT(base), [vo,vw]=utt.mouth(st);
+      const amp=utt.energy(st), acc=utt.accent(st), sw=utt.breath(st);
+      // The viseme says WHAT shape; the expression says how big it gets made.
+      p.mouth_open=Math.max(p.mouth_open,Math.min(1.1,vo*(T[0]/.60)));
+      p.mouth_w*=vw*(1+(T[1]-1)*amp);
+      p.shift_y-=T[2]*(.65*amp+.35*acc);
+      p.tilt+=T[3]*sw;
+      p.glow*=1+T[4]*amp;
+      for(const k of['left','right']){
+        p[k].h*=1-T[5]*amp; p[k].pupil_y+=.07*T[8]*acc;
+        p[k].upper_lid=Math.max(p[k].upper_lid,.10*T[8]*acc);
+      }
+    }
+  }
+  return sanitise(p);
+}
+
+/* ---- input ---- */
+const screen=document.getElementById('screen'), status=document.getElementById('status');
+let lastActivity=now(), asleep=false;
+function msg(h){status.innerHTML=h;}
+function toPanel(ev){
+  const r=screen.getBoundingClientRect();
+  return [(ev.clientX-r.left)*PANEL_W/r.width,(ev.clientY-r.top)*PANEL_H/r.height];
+}
+screen.addEventListener('pointerdown',e=>{
+  screen.setPointerCapture(e.pointerId); lastActivity=now(); asleep=false;
+  const [x,y]=toPanel(e); msg(`<b>${touchDown(x,y)}</b> &mdash; ${regionAt(x,y).replace('_',' ')}`);
+});
+screen.addEventListener('pointermove',e=>{
+  const [x,y]=toPanel(e);
+  if(pressAt){
+    drag+=Math.hypot(x-pressAt[0],y-pressAt[1]); pressAt=[x,y]; lookTo(x,y,.9);
+    if(drag>PANEL_W*.22){flash('love',1.4,.3); drag=0; msg('<b>love</b> &mdash; being stroked is the one thing that always feels good');}
+  } else if(e.pointerType==='mouse'&&!asleep) lookTo(x,y,.35);
+});
+const up=e=>{
+  if(pressAt&&now()-pressT>.9&&drag<20){flash('shy',1.3,.35); msg('<b>shy</b> &mdash; long press');}
+  pressAt=null; drag=0;
+};
+screen.addEventListener('pointerup',up); screen.addEventListener('pointercancel',up);
+
+const input=document.getElementById('say');
+function submit(){
+  const v=input.value.trim(); if(!v) return;
+  input.value=''; lastActivity=now(); asleep=false;
+  const esc=v.replace(/[<>&]/g,ch=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[ch]));
+  if(speakMode){
+    const d=speak(v);
+    msg(`speaking in <b>${base}</b>: ${esc}`);
+    return;
+  }
+  setX('listening');
+  msg(`you: <b>${esc}</b>`);
+  // The real script hands this to Brain.ask(); here we walk the states it
+  // would walk and then speak a reply, so the sequence can be judged.
+  const q=/[?？]/.test(v);
+  const seq=q?[['thinking',.9],['searching',1.1],['answering',.5]]
+             :[['thinking',.8],['answering',.5]];
+  let d=0;
+  for(const [n,hold] of seq){ setTimeout(()=>setX(n),d*1000); d+=hold; }
+  setTimeout(()=>{
+    const reply=q?"Let me see. Yes, it is on the list for tomorrow."
+                 :"Noted. I will remember that.";
+    setX(q?'delight':'answering'); speak(reply);
+    msg(`<b>${reply}</b>`);
+  },d*1000);
+}
+document.getElementById('send').addEventListener('click',submit);
+input.addEventListener('keydown',e=>{if(e.key==='Enter')submit();});
+
+let speakMode=false;
+const modeBtn=document.getElementById('mode');
+modeBtn.addEventListener('click',()=>{
+  speakMode=!speakMode;
+  modeBtn.setAttribute('aria-pressed',String(speakMode));
+  modeBtn.textContent=speakMode?'Speaking mode: on':'Make him say it';
+  modeBtn.style.borderColor=speakMode?'var(--amber)':'#34322f';
+  modeBtn.style.color=speakMode?'var(--amber-hot)':'var(--ink)';
+  input.placeholder=speakMode?'type words for him to speak…':'say something…';
+  msg(speakMode?'Hold an expression from the chips, then type \u2014 he says your words <b>in that mood</b>.'
+               :'Back to conversation mode.');
+});
+const chips=document.getElementById('chips');
+for(const n of Object.keys(X)){
+  const b=document.createElement('button'); b.textContent=n;
+  b.addEventListener('click',()=>{lastActivity=now();asleep=false;overlay=null;setX(n);msg(`holding <b>${n}</b>`);});
+  chips.appendChild(b);
+}
+
+/* ---- loop ---- */
+function frame(){
+  if(!asleep&&now()-lastActivity>75){asleep=true; flash('yawn',1.6,.5); setTimeout(()=>setX('asleep',1.8),1600);}
+  render(update());
+  requestAnimationFrame(frame);
+}
+frame();
+</script>

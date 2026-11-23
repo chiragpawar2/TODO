@@ -1,0 +1,12 @@
+  plain        n=30 expr 30/30  level 29/30
+  negation     n=10 expr 10/10  level 10/10
+  hinglish     n=10 expr 10/10  level 10/10
+  devanagari   n=10 expr 10/10  level 10/10
+  emoji        n= 8 expr 8/8  level 8/8
+  typo         n= 6 expr 5/6  level 6/6
+  sarcasm      n= 5 expr 5/5  level 5/5
+  substring    n=12 expr 11/12  level 12/12
+  context      n= 8 expr 8/8  level 8/8
+  command      n= 8 expr 8/8  level 8/8
+  to_bot       n= 8 expr 8/8  level 8/8
+  overtrigger  n= 5 expr 4/5  level 5/5

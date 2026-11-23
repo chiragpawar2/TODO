@@ -1,0 +1,25 @@
+# The AI engines. openai covers Gemini, Groq, OpenRouter, Cerebras and Ollama,
+# since they all speak the same dialect. anthropic is only needed for Claude.
+openai>=1.40.0
+anthropic>=1.0.0
+
+python-dotenv>=1.0.0
+PyYAML>=6.0
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# The face (homebot/face). pygame-ce renders to SDL2, which on a Pi draws
+# straight to the framebuffer via KMSDRM - no desktop needed - and delivers
+# touchscreen taps as FINGER* events.
+pygame-ce>=2.5.0
+# Push-to-talk capture. Optional: without them the face still runs, typed only.
+sounddevice>=0.4.6
+numpy>=1.26
+# Optional, and the right call on the Pi: local speech-to-text, no network,
+# handles Hindi and Marathi. pip install faster-whisper
+# Optional: an on-device emotion model, asked ONLY when the face's rules find
+# no cue in a line. ~122 MB int8 ONNX, CPU only, no torch. Without these the
+# face runs on rules alone. See homebot/face/README.md ("Emotion fallback").
+# onnxruntime>=1.18
+# tokenizers>=0.19
+# huggingface_hub>=0.23   # only to download the model once

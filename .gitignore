@@ -1,0 +1,20 @@
+# secrets and local config
+.env
+config.yaml
+.claude/settings.local.json
+
+# local data and downloads
+*.db
+models/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# generated test output (re-created by every run)
+todo-character/tests/*_results.json
+
+# macOS
+.DS_Store

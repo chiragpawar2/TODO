@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>homebot</title>
+<style>
+  :root {
+    --bg: #faf9f7; --card: #ffffff; --ink: #1c1b19; --muted: #6b6864;
+    --line: #e7e4df; --accent: #2f6f4f; --accent-soft: #e8f1eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17181a; --card: #202225; --ink: #eceae6; --muted: #9b9791;
+      --line: #32353a; --accent: #7fc4a0; --accent-soft: #23302a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
+  header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  h1 { font-size: 20px; margin: 0; }
+  select, input, button { font: inherit; }
+  select, input[type=text] {
+    background: var(--card); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  }
+  button {
+    background: var(--accent); color: #fff; border: 0;
+    border-radius: 10px; padding: 10px 16px; cursor: pointer;
+  }
+  button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); padding: 4px 10px; font-size: 13px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 14px; margin-bottom: 14px;
+  }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
+             color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+  #log { max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  .msg { padding: 9px 13px; border-radius: 14px; max-width: 85%; white-space: pre-wrap; }
+  .me  { align-self: flex-end; background: var(--accent-soft); }
+  .bot { align-self: flex-start; background: var(--bg); border: 1px solid var(--line); }
+  .who { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+  form { display: flex; gap: 8px; margin-top: 12px; }
+  form input { flex: 1; min-width: 0; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+  li:last-child { border-bottom: 0; }
+  li span.grow { flex: 1; }
+  .tag { font-size: 12px; color: var(--muted); }
+  .overdue { color: #c1483c; font-weight: 600; }
+  .empty { color: var(--muted); font-size: 14px; }
+  /* On a phone, let the title own its own line instead of being squeezed. */
+  @media (max-width: 480px) {
+    li { flex-wrap: wrap; row-gap: 4px; }
+    li span.grow { flex: 1 0 100%; }
+    .tag, .overdue { flex: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="title">homebot</h1>
+    <label class="tag">you are
+      <select id="speaker"></select>
+    </label>
+  </header>
+
+  <div class="card">
+    <h2>Talk</h2>
+    <div id="log"><div class="empty">Say something, like "remind me to pay the electricity bill on Friday".</div></div>
+    <form id="chat">
+      <input id="text" type="text" placeholder="Type what you would say out loud" autocomplete="off">
+      <button>Send</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Tasks</h2>
+    <ul id="tasks"></ul>
+  </div>
+
+  <div class="card">
+    <h2>Chores</h2>
+    <ul id="chores"></ul>
+  </div>
+
+  <div class="card">
+    <h2>Shopping</h2>
+    <ul id="shopping"></ul>
+    <form id="shop">
+      <input id="item" type="text" placeholder="Add an item" autocomplete="off">
+      <button>Add</button>
+    </form>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const today = new Date().toISOString().slice(0, 10);
+let people = [];
+
+function say(who, text, mine) {
+  const log = $("log");
+  if (log.querySelector(".empty")) log.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.className = "msg " + (mine ? "me" : "bot");
+  const label = document.createElement("div");
+  label.className = "who";
+  label.textContent = who;
+  const body = document.createElement("div");
+  body.textContent = text;
+  wrap.append(label, body);
+  log.append(wrap);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function api(path, options) {
+  const res = await fetch(path, options);
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || res.statusText);
+  return res.json();
+}
+
+function li(children) {
+  const el = document.createElement("li");
+  children.forEach((c) => el.append(c));
+  return el;
+}
+function text(str, cls) {
+  const s = document.createElement("span");
+  s.textContent = str;
+  if (cls) s.className = cls;
+  return s;
+}
+
+async function refresh() {
+  const s = await api("/api/state");
+  $("title").textContent = s.household;
+
+  if (people.join() !== s.people.join()) {
+    people = s.people;
+    const sel = $("speaker");
+    const current = sel.value;
+    sel.innerHTML = "";
+    people.forEach((p) => {
+      const o = document.createElement("option");
+      o.value = o.textContent = p;
+      sel.append(o);
+    });
+    if (people.includes(current)) sel.value = current;
+  }
+
+  const tasks = $("tasks");
+  tasks.innerHTML = "";
+  if (!s.tasks.length) tasks.append(li([text("Nothing pending.", "empty")]));
+  s.tasks.forEach((t) => {
+    const name = text(t.title);
+    name.className = "grow";
+    const meta = [t.assignee || "unassigned"];
+    if (t.due) meta.push("due " + t.due);
+    const tag = text(meta.join(" · "), t.due && t.due < today ? "overdue" : "tag");
+    const done = document.createElement("button");
+    done.className = "ghost";
+    done.textContent = "Done";
+    done.onclick = async () => {
+      await api(`/api/task/${t.id}/complete`, { method: "POST" });
+      refresh();
+    };
+    tasks.append(li([name, tag, done]));
+  });
+
+  const chores = $("chores");
+  chores.innerHTML = "";
+  if (!s.chores.length) chores.append(li([text("No chores set up.", "empty")]));
+  s.chores.forEach((c) => {
+    const name = text(c.title);
+    name.className = "grow";
+    const last = c.last_done_at ? "last " + c.last_done_at.slice(0, 10) : "never done";
+    chores.append(li([name, text(`${c.assignee || "unassigned"} · ${c.recurrence} · ${last}`, "tag")]));
+  });
+
+  const shopping = $("shopping");
+  shopping.innerHTML = "";
+  if (!s.shopping.length) shopping.append(li([text("List is empty.", "empty")]));
+  s.shopping.forEach((item) => {
+    const name = text(item.item + (item.qty ? " — " + item.qty : ""));
+    name.className = "grow";
+    const got = document.createElement("button");
+    got.className = "ghost";
+    got.textContent = "Bought";
+    got.onclick = async () => {
+      await api("/api/shopping/bought", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item: item.item }),
+      });
+      refresh();
+    };
+    shopping.append(li([name, got]));
+  });
+}
+
+$("chat").onsubmit = async (e) => {
+  e.preventDefault();
+  const input = $("text");
+  const msg = input.value.trim();
+  if (!msg) return;
+  const speaker = $("speaker").value || "someone";
+  say(speaker, msg, true);
+  input.value = "";
+  input.disabled = true;
+  try {
+    const r = await api("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ speaker, text: msg }),
+    });
+    say("bot", r.reply, false);
+    refresh();
+  } catch (err) {
+    say("bot", "Error: " + err.message, false);
+  } finally {
+    input.disabled = false;
+    input.focus();
+  }
+};
+
+$("shop").onsubmit = async (e) => {
+  e.preventDefault();
+  const input = $("item");
+  const item = input.value.trim();
+  if (!item) return;
+  input.value = "";
+  await api("/api/shopping", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ item }),
+  });
+  refresh();
+};
+
+refresh();
+setInterval(refresh, 10000);   // pick up changes other family members make
+</script>
+</body>
+</html>

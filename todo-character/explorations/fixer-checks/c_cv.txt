@@ -1,0 +1,140 @@
+pygame-ce 2.5.8 (SDL 2.32.10, Python 3.12.14)
+real-thread latency ...
+
+=== a. expression / level accuracy (user turns) ===
+  short  turns= 40  expr=40/40 (100%)  level=40/40 (100%)
+  medium turns= 94  expr=92/94 (98%)  level=94/94 (100%)
+  long   turns=164  expr=157/164 (96%)  level=164/164 (100%)
+  ALL    turns=298  expr=289/298 (97%)  level=298/298 (100%)
+  misses by chosen expression: [('attentive', 2), ('grin', 1), ('thinking', 1), ('sad', 1), ('skeptical', 1), ('content', 1), ('tender', 1), ('happy', 1)]
+  misses by deciding phrase: [('<default>', 2), ('model:amusement 0.77', 1), ('think*', 1), ('aathvan yete', 1), ('model:disapproval 0.51', 1), ('model:approval 0.71', 1), ('model:caring 0.77', 1), ('model:admiration 0.87', 1)]
+  level confusions (expected -> got): []
+  Devanagari user turns: 13, correct 13, chosen Counter({'curious': 6, 'attentive': 3, 'sad': 1, 'confusion': 1, 'content': 1, 'happy': 1})
+
+=== b. lip sync ===
+  replies=290  clean=284 (98%)
+  issue counts: [('seconds_per_word', 4), ('number_read_as_year', 2)]
+    [seconds_per_word] 'Good night. Sleep well.' -> (0.931,)
+    [seconds_per_word] "You're welcome. Breathe." -> (0.974,)
+    [seconds_per_word] 'Good night, Aarav.' -> (1.002,)
+    [number_read_as_year] 'Your bank limits UPI to ₹1,00,000 a day, and you can block it by calli' -> ('1930.', ['nineteen', 'thirty'])
+    [number_read_as_year] "You're doing everything right. I'm calling the gas agency emergency li" -> ('1906.', ['nineteen', 'oh', 'six'])
+  seconds/word: min 0.205 median 0.432 max 1.142
+  Devanagari replies: 13, with issues: 0
+  extra probes:
+    '७:३० वाजता': {'normalise': '(deva)', 'skipped': [], 'words': ['seven', 'thirty', 'वाजता']}
+    '₹१,२५० झाले': {'normalise': '(deva)', 'skipped': [], 'words': ['rupees', 'one', 'thousand', 'two', 'hundred', 'fifty', 'झाले']}
+    '₹1,250.50': {'normalise': ['one', 'thousand', 'two', 'hundred', 'fifty', 'rupees', 'fifty', 'paise'], 'skipped': [], 'words': ['one', 'thousand', 'two', 'hundred', 'fifty', 'rupees', 'fifty', 'paise']}
+    '₹2.5 lakh': {'normalise': ['rupees', 'two', 'point', 'five', 'lakh'], 'skipped': [], 'words': ['rupees', 'two', 'point', 'five', 'lakh']}
+    '10am': {'normalise': ['ten', 'ay', 'em'], 'skipped': [], 'words': ['ten', 'ay', 'em']}
+    '7:30pm': {'normalise': ['seven', 'thirty', 'pee', 'em'], 'skipped': [], 'words': ['seven', 'thirty', 'pee', 'em']}
+    'Rs.500': {'normalise': ['rupees', 'five', 'hundred'], 'skipped': [], 'words': ['rupees', 'five', 'hundred']}
+    '2-3 days': {'normalise': ['two', 'to', 'three', 'days'], 'skipped': [], 'words': ['two', 'to', 'three', 'days']}
+    '98201-23456': {'normalise': ['nine', 'eight', 'two', 'zero', 'one', 'two', 'three', 'four', 'five', 'six'], 'skipped': [], 'words': ['nine', 'eight', 'two', 'zero', 'one', 'two', 'three', 'four', 'five', 'six']}
+    '45°C': {'normalise': ['forty', 'five', 'degrees', 'celsius'], 'skipped': [], 'words': ['forty', 'five', 'degrees', 'celsius']}
+    '₹1,00,000': {'normalise': ['rupees', 'one', 'lakh'], 'skipped': [], 'words': ['rupees', 'one', 'lakh']}
+    'call 1906': {'normalise': ['call', 'one', 'nine', 'zero', 'six'], 'skipped': [], 'words': ['call', 'one', 'nine', 'zero', 'six']}
+    '5 km': {'normalise': ['five', 'kilometres'], 'skipped': [], 'words': ['five', 'kilometres']}
+
+=== c. speech on top of the expression ===
+  face at reply start: [('answering', 258), ('curious', 7), ('apologetic', 5), ('tender', 4), ('asleep', 3), ('content', 3), ('attentive', 3), ('worried', 2), ('sad', 2), ('confusion', 1), ('stern', 1), ('happy', 1)]
+  replies whose mouth never opened >0.15: 1 [('...', 'apologetic')]
+  replies with invisible-mouth speech frames: 0; frames total 0
+  all speech frames 55719, mouthless-while-voicing 0
+  mouthless pose experiment:
+    tender/set                   {'duration': 7.93, 'mouth_open_max': 0.667, 'mouth_alpha_min': 0.33, 'rest_mouth_px': 0, 'speech_mouth_px_max': 5064, 'sampled_frames_mouth_visibly_moving': 80, 'sampled_frames': 80, 'head_bob_px_max': None}
+    tender/read_intensity        {'duration': 7.93, 'mouth_open_max': 0.667, 'mouth_alpha_min': 0.33, 'rest_mouth_px': 0, 'speech_mouth_px_max': 5042, 'sampled_frames_mouth_visibly_moving': 80, 'sampled_frames': 80, 'head_bob_px_max': None}
+    alarmed/set                  {'duration': 5.44, 'mouth_open_max': 1.1, 'mouth_alpha_min': 0.33, 'rest_mouth_px': 0, 'speech_mouth_px_max': 8948, 'sampled_frames_mouth_visibly_moving': 55, 'sampled_frames': 55, 'head_bob_px_max': None}
+    alarmed/read_intensity       {'duration': 5.44, 'mouth_open_max': 1.1, 'mouth_alpha_min': 0.33, 'rest_mouth_px': 0, 'speech_mouth_px_max': 8938, 'sampled_frames_mouth_visibly_moving': 55, 'sampled_frames': 55, 'head_bob_px_max': None}
+    peek/set                     {'duration': 6.06, 'mouth_open_max': 0.767, 'mouth_alpha_min': 0.33, 'rest_mouth_px': 0, 'speech_mouth_px_max': 5952, 'sampled_frames_mouth_visibly_moving': 61, 'sampled_frames': 61, 'head_bob_px_max': None}
+    peek/read_intensity          {'duration': 6.06, 'mouth_open_max': 0.767, 'mouth_alpha_min': 0.33, 'rest_mouth_px': 0, 'speech_mouth_px_max': 5926, 'sampled_frames_mouth_visibly_moving': 61, 'sampled_frames': 61, 'head_bob_px_max': None}
+    attentive/set                {'duration': 6.17, 'mouth_open_max': 0.733, 'mouth_alpha_min': 0.33, 'rest_mouth_px': 0, 'speech_mouth_px_max': 5815, 'sampled_frames_mouth_visibly_moving': 62, 'sampled_frames': 62, 'head_bob_px_max': None}
+    attentive/read_intensity     {'duration': 6.17, 'mouth_open_max': 0.733, 'mouth_alpha_min': 0.33, 'rest_mouth_px': 0, 'speech_mouth_px_max': 5815, 'sampled_frames_mouth_visibly_moving': 62, 'sampled_frames': 62, 'head_bob_px_max': None}
+    drowsy/set                   {'duration': 10.27, 'mouth_open_max': 0.433, 'mouth_alpha_min': 0.33, 'rest_mouth_px': 0, 'speech_mouth_px_max': 3712, 'sampled_frames_mouth_visibly_moving': 103, 'sampled_frames': 103, 'head_bob_px_max': None}
+    drowsy/read_intensity        {'duration': 10.27, 'mouth_open_max': 0.433, 'mouth_alpha_min': 0.33, 'rest_mouth_px': 0, 'speech_mouth_px_max': 3707, 'sampled_frames_mouth_visibly_moving': 103, 'sampled_frames': 103, 'head_bob_px_max': None}
+    suspicious/set               {'duration': 6.25, 'mouth_open_max': 0.567, 'mouth_alpha_min': 0.33, 'rest_mouth_px': 0, 'speech_mouth_px_max': 2284, 'sampled_frames_mouth_visibly_moving': 63, 'sampled_frames': 63, 'head_bob_px_max': None}
+    suspicious/read_intensity    {'duration': 6.25, 'mouth_open_max': 0.567, 'mouth_alpha_min': 0.33, 'rest_mouth_px': 0, 'speech_mouth_px_max': 2390, 'sampled_frames_mouth_visibly_moving': 63, 'sampled_frames': 63, 'head_bob_px_max': None}
+    answering/set                {'duration': 6.17, 'mouth_open_max': 1.1, 'mouth_alpha_min': 1.0, 'rest_mouth_px': 4719, 'speech_mouth_px_max': 12335, 'sampled_frames_mouth_visibly_moving': 41, 'sampled_frames': 62, 'head_bob_px_max': None}
+    answering/read_intensity     {'duration': 6.17, 'mouth_open_max': 1.1, 'mouth_alpha_min': 1.0, 'rest_mouth_px': 4719, 'speech_mouth_px_max': 12335, 'sampled_frames_mouth_visibly_moving': 41, 'sampled_frames': 62, 'head_bob_px_max': None}
+    rest/set                     {'duration': 6.0, 'mouth_open_max': 1.0, 'mouth_alpha_min': 1.0, 'rest_mouth_px': 3883, 'speech_mouth_px_max': 8522, 'sampled_frames_mouth_visibly_moving': 31, 'sampled_frames': 61, 'head_bob_px_max': None}
+    rest/read_intensity          {'duration': 6.0, 'mouth_open_max': 1.0, 'mouth_alpha_min': 1.0, 'rest_mouth_px': 3883, 'speech_mouth_px_max': 8522, 'sampled_frames_mouth_visibly_moving': 31, 'sampled_frames': 61, 'head_bob_px_max': None}
+    sad/set                      {'duration': 7.69, 'mouth_open_max': 0.433, 'mouth_alpha_min': 1.0, 'rest_mouth_px': 3364, 'speech_mouth_px_max': 3470, 'sampled_frames_mouth_visibly_moving': 18, 'sampled_frames': 77, 'head_bob_px_max': None}
+    sad/read_intensity           {'duration': 7.69, 'mouth_open_max': 0.433, 'mouth_alpha_min': 1.0, 'rest_mouth_px': 3336, 'speech_mouth_px_max': 3476, 'sampled_frames_mouth_visibly_moving': 18, 'sampled_frames': 77, 'head_bob_px_max': None}
+
+=== d. frame sanity ===
+  frames=217427  sanity violations=0 []
+  jumps over threshold by cause: [('legit', 1111), ('talk_swap_mid_speech', 1)]
+  glitch jumps by (cause, channel): [(('talk_swap_mid_speech', 'mouth_open'), 1)]
+    [talk_swap_mid_speech] c077 t=1023.38 mouth_open d=0.49 resid=0.49 curious->answering
+  legit jumps by (cause, channel): [(('legit:speech', 'mouth_open'), 537), (('legit:transition', 'glow'), 271), (('legit:saccade+speech', 'mouth_open'), 41), (('legit:blink+speech', 'mouth_open'), 24), (('legit:transition', 'l.h'), 24), (('legit:transition', 'r.h'), 24), (('legit:snap_beat', 'mouth_alpha'), 22), (('legit:snap_beat', 'mouth_curve'), 15), (('legit:snap_beat', 'l.h'), 14), (('legit:snap_beat', 'r.h'), 14), (('legit:transition', 'mouth_open'), 12), (('legit:snap_beat', 'glow'), 8)]
+  conversations with >=1 glitch jump: 1/100
+  conversations with voiced-but-mouthless frames: []
+
+=== e/f. transitions & interruptions ===
+  c060 user-interrupt 'wait, I meant Mumbai': speaking_before=True after=False base=attentive
+  c061 user-interrupt "thank you, that's enough": speaking_before=True after=False base=tender
+  c089 user-interrupt 'no no, stop, just those three': speaking_before=True after=False base=stern
+  c090 user-interrupt "that's lovely, thank you": speaking_before=True after=False base=tender
+  c096 user-interrupt "wait, Dadi is in hospital. I don't feel like a party": speaking_before=True after=False base=worried
+  replies that cut off a still-running reply: 0
+  touches=15, during speech=2, speech survived=2
+  touch reactions: [('surprised', 4), ('wake', 4), ('shy', 3), ('squint', 2), ('curious', 2), ('wink', 2), ('annoyed', 1), ('dizzy', 1)]
+  user turns silently dropped by mind.busy: 3 [('c062', 'and tomatoes'), ('c062', 'and coriander'), ('c098', 'and my tiffin?')]
+  mood change mid-utterance:
+    sad: {'mouth_invisible_after_s': None, 'speech_left_when_mouth_vanished_s': None, 'read_as': 'sad', 'still_speaking_after_submit': False, 'duration_unchanged': True, 'mouth_open_peak_before': 1.1, 'mouth_open_peak_after': 0, 'mouth_alpha_after_min': 1, 'shift_y_min_before': -2.71, 'shift_y_max_after': 0, 'first_frame_delta': {'mouth_open': -0.037, 'shift_y': -0.723, 'glow': -0.003, 'mouth_alpha': 0.0, 'mouth_w': 0.005}, 'jumps_over_threshold': []}
+    tender: {'mouth_invisible_after_s': None, 'speech_left_when_mouth_vanished_s': None, 'read_as': 'tender', 'still_speaking_after_submit': False, 'duration_unchanged': True, 'mouth_open_peak_before': 1.1, 'mouth_open_peak_after': 0, 'mouth_alpha_after_min': 1, 'shift_y_min_before': -2.71, 'shift_y_max_after': 0, 'first_frame_delta': {'mouth_open': -0.029, 'shift_y': -0.884, 'glow': -0.003, 'mouth_alpha': 0.0, 'mouth_w': 0.006}, 'jumps_over_threshold': []}
+    angry: {'mouth_invisible_after_s': None, 'speech_left_when_mouth_vanished_s': None, 'read_as': 'angry', 'still_speaking_after_submit': False, 'duration_unchanged': True, 'mouth_open_peak_before': 1.1, 'mouth_open_peak_after': 0, 'mouth_alpha_after_min': 1, 'shift_y_min_before': -2.71, 'shift_y_max_after': 0, 'first_frame_delta': {'mouth_open': -0.012, 'shift_y': -1.01, 'glow': 0.002, 'mouth_alpha': 0.0, 'mouth_w': 0.006}, 'jumps_over_threshold': []}
+  reply replaced mid-speech: {'mouth_open_when_user_typed': 0.567, 'speech_continued_after_user_turn': False, 'old_utterance_still_running_after_thinking': False, 'mouth_open_just_before_new_reply': 0.0, 'mouth_open_first_frame_of_new_reply': 0.0, 'no_hush_called': True, 'jumps': []}
+  sequences:
+    user_turn_stops_sequence: {'playing': False, 'base': 'curious'}
+    brain_state_during_sequence: {'base_right_after_thinking': 'thinking', 'base_after_reply': 'rest', 'trace': [(1000.02, 'drowsy'), (1000.52, 'thinking'), (1002.02, 'answering'), (1005.98, 'rest')], 'still_playing': False}
+    touch_during_nod_off: {'base_when_touched': 'asleep', 'reaction': 'wake', 'base_6s_later': 'rest', 'app_asleep_flag': False, 'trace': [(1000.02, 'drowsy'), (1000.92, 'waking'), (1001.28, 'drowsy'), (1002.1, 'yawn'), (1002.92, 'asleep'), (1004.22, 'waking'), (1008.22, 'rest')]}
+  touch during speech:
+    mouth: {'reaction': 'surprised', 'speech_continued': True, 'mouth_open_min_during_flash': 0.06, 'mouth_open_max_during_flash': 1.1, 'talk_style_used': 'answering'}
+    cheek_left: {'reaction': 'shy', 'speech_continued': True, 'mouth_open_min_during_flash': 0.0, 'mouth_open_max_during_flash': 1.1, 'talk_style_used': 'answering'}
+    forehead: {'reaction': 'confusion', 'speech_continued': True, 'mouth_open_min_during_flash': 0.0, 'mouth_open_max_during_flash': 1.1, 'talk_style_used': 'answering'}
+    poke5_during_speech: {'reacts': ['surprised', 'surprised', 'surprised', 'annoyed', 'dizzy'], 'speech_continued': True}
+  face after reply, by final brain state:
+    thinking>speaking: {'spoke_in': 'answering', 'base_10s': 'rest', 'base_60s': 'rest'}
+    thinking>refused: {'spoke_in': 'apologetic', 'base_10s': 'rest', 'base_60s': 'rest'}
+    thinking>stuck: {'spoke_in': 'confusion', 'base_10s': 'rest', 'base_60s': 'rest'}
+    thinking>tool: {'spoke_in': 'searching', 'base_10s': 'rest', 'base_60s': 'rest'}
+    thinking>unknown_speaker: {'spoke_in': 'confusion', 'base_10s': 'rest', 'base_60s': 'rest'}
+    thinking>success: {'spoke_in': 'delight', 'base_10s': 'rest', 'base_60s': 'rest'}
+  real Mind threading: {'base_seen_immediately_after_submit': {'happy': 12, 'worried': 12, 'tender': 12, 'sad': 12, 'crying': 12}, 'read_faces_requested': {'happy': 12, 'worried': 12, 'tender': 12, 'sad': 12, 'crying': 12}, 'offline_round_trip_ms_median': 0.36}
+
+=== g. idle / sleep / wake ===
+  idle_to_sleep: {'asleep_after_s': 75.02, 'overlay_at_sleep': 'yawn', 'final_base': 'asleep', 'asleep_beat_dur_used': 1.8, 'asleep_duration_requested': 1.8, 'trace': [(1075.02, 'asleep')], 'blinks_while_asleep': None, 'asleep_glow_range': (0.238, 0.442)}
+  wake_by_key: {'base_overlay_after_key': ('waking', 'surprised'), 'base_while_typing_3s': 'waking', 'base_after_submit': 'curious', 'jumps': []}
+  wake_by_touch_then_silence: {'reaction': 'wake', 'marks': {'1s': ('waking', False), '5s': ('rest', False), '20s': ('rest', False), '60s': ('rest', False), '80s': ('asleep', True)}}
+  brain_sleep_state: {'after_reply': ('asleep', True, 0.16), 'yawn_overlay_on_already_sleeping_face_at_s': None, 'key_after_brain_sleep': ('waking', 'surprised')}
+  long_brain_call: {'asleep': False, 'base': 'thinking'}
+  c068 quiet 90s -> asleep_flag=True base=asleep
+  c069 quiet 85s -> asleep_flag=True base=asleep
+  c087 quiet 100s -> asleep_flag=True base=asleep
+  c087 quiet 120s -> asleep_flag=True base=asleep
+  c087 quiet 90s -> asleep_flag=True base=asleep
+  c095 quiet 80s -> asleep_flag=True base=asleep
+  c068 next input 'hello? are you there?': flag_asleep=True base_was_asleep=True -> listening
+  c087 next input "I'm back": flag_asleep=True base_was_asleep=True -> attentive
+  c087 next input 'homebot, wake up, what time is it?': flag_asleep=True base_was_asleep=True -> curious
+  face 12s after each conversation ends: [('rest', 98), ('asleep', 2)]
+
+=== h. variety ===
+  consecutive user turns with the same read() face: 39/198 (20%)
+  longest same-face run: ('c084', 4)
+  read() faces used: [('attentive', 55), ('curious', 55), ('happy', 21), ('sad', 16), ('delight', 15), ('worried', 15), ('grin', 14), ('tender', 13), ('angry', 10), ('suspicious', 9), ('bored', 8), ('content', 8), ('surprised', 6), ('listening', 5), ('apologetic', 5), ('stern', 5), ('thinking', 5), ('drowsy', 4), ('skeptical', 4), ('proud', 4), ('confusion', 4), ('asleep', 3), ('focused', 3), ('love', 2), ('alarmed', 2), ('shy', 2), ('searching', 2), ('crying', 1), ('mischief', 1), ('startled', 1)]
+  shown at all (base or overlay) across 100 conversations: 38/43
+  never shown: ['glitch', 'dread', 'fret', 'peek', 'blink']
+  never chosen by read(): 13 ['rest', 'answering', 'wink', 'dizzy', 'squint', 'yawn', 'waking', 'glitch', 'oh', 'dread', 'fret', 'peek', 'blink']
+  share of all frames by base: [('answering', '41.1%'), ('rest', '40.8%'), ('asleep', '6.0%'), ('thinking', '3.2%'), ('searching', '1.3%'), ('attentive', '1.3%'), ('delight', '1.0%'), ('curious', '0.9%')]
+
+=== i. performance ===
+  update(): n=217427 mean 52.3 us  p99 170.5 us  max 10453.8 us
+  read(): mean 22983.4 us max 227476.5 us
+  VisemeTrack: mean 0.381 ms max 2.192 ms
+  renderer.render() (640x400, laptop): 5.81 ms
+  whole simulation wall time 28.4s for 217427 frames
+
+=== offline pass (OfflineMind, real) ===
+  {'speaking_face': {'answering': 197, 'delight': 20, 'searching': 77, 'asleep': 4}, 'distinct_replies': 8, 'top_replies': [('I cannot look that up yet. Set GEMINI_API_KEY in .env and I will.', 77), ('I hear you. No brain attached yet.', 72), ('Noted, though I am only pretending to remember it.', 71), ('Right. Give me an API key and I will mean that.', 54)], 'examples': [('When is the Pune train tomorrow?', ['thinking', 'tool'], 'I cannot look that up yet. Set GEMINI_API_KEY in .env and I will.', 'searching'), ('How much did we spend on vegetables this week?', ['thinking', 'tool'], 'I cannot look that up yet. Set GEMINI_API_KEY in .env and I will.', 'searching'), ('good night homebot', ['thinking', 'sleep'], 'Goodnight.', 'asleep'), ('How much atta is left?', ['thinking', 'tool'], 'I cannot look that up yet. Set GEMINI_API_KEY in .env and I will.', 'searching'), ("What is the plumber's number?", ['thinking', 'tool'], 'I cannot look that up yet. Set GEMINI_API_KEY in .env and I will.', 'searching'), ('hmm are you sure the gas bill is paid?', ['thinking', 'tool'], 'I cannot look that up yet. Set GEMINI_API_KEY in .env and I will.', 'searching')]}

@@ -1,0 +1,182 @@
+SINGLE: 131 cases  expression 128/131 (98%)  level 131/131 (100%)  both 128/131
+  single_word  n= 9 expr 9/9  level 9/9
+  plain        n=26 expr 25/26  level 26/26
+  strength     n=12 expr 12/12  level 12/12
+  negation     n= 7 expr 7/7  level 7/7
+  sarcasm      n= 4 expr 4/4  level 4/4
+  command      n= 8 expr 8/8  level 8/8
+  hinglish     n=12 expr 11/12  level 12/12
+  devanagari   n= 6 expr 6/6  level 6/6
+  emoji        n= 6 expr 6/6  level 6/6
+  typo         n= 6 expr 6/6  level 6/6
+  edge         n= 7 expr 7/7  level 7/7
+  substring    n=22 expr 21/22  level 22/22
+  to_bot       n= 6 expr 6/6  level 6/6
+
+SINGLE FAILURES (expression):
+  p07 "The plumber didn't show up again, I'm furious" -> sad/mid (why="didn't show up") expected ['angry']
+  h11 'abhi nahi, baad mein' -> sad/mid (why='bad') expected ['attentive', 'rest', 'bored', 'skeptical']
+  f01 "I'm reading about the crusades" -> worried/mid (why='dreading') expected ['curious', 'focused', 'thinking', 'attentive', 'listening', 'rest', 'answering']
+
+SINGLE FAILURES (level only):
+
+MULTI: 25 paragraphs, 56 beats
+  whole-paragraph read(): 24/56 beats (43%); paragraphs with any beat 24/25; matched beat was the FIRST beat in 13
+  per-sentence read():   55/56 beats (98%); all beats in 24/25; level right on 55/55 captured beats
+  m01 whole=sad/mid('miss everyone') per=['delight', 'sad'] 2/2
+  m02 whole=apologetic/mid('sorry') per=['apologetic', 'tender'] 2/2
+  m03 whole=content/mid('thank god') per=['worried', 'content'] 2/2
+  m04 whole=grin/mid('haha*') per=['grin', 'crying'] 2/2
+  m05 whole=angry/mid('furious') per=['angry', 'searching'] 2/2
+  m06 whole=happy/mid('happy') per=['happy', 'sad'] 2/2
+  m07 whole=angry/mid('fed up') per=['fret', 'angry', 'curious'] 3/3
+  m08 whole=tender/mid('touched') per=['surprised', 'tender'] 2/2
+  m09 whole=happy/mid('happy') per=['drowsy', 'happy'] 2/2
+  m10 whole=content/mid('thankfully') per=['dread', 'content', 'worried'] 3/3
+  m11 whole=bored/mid('bored') per=['bored', 'curious'] 2/2
+  m12 whole=sad/mid('failed') per=['sad', 'shy', 'content'] 3/3
+  m13 whole=worried/mid('in the hospital') per=['worried', 'worried', 'attentive'] 3/3
+  m14 whole=delight/mid('we won') per=['delight', 'suspicious'] 2/2
+  m15 whole=love/mid('i love you') per=['love', 'stern'] 2/2
+  m16 whole=angry/mid('yelled at you') per=['angry', 'fret'] 1/2
+  m17 whole=delight/mid('great news') per=['delight', 'worried'] 2/2
+  m18 whole=oh/mid('i see') per=['confusion', 'oh', 'content'] 3/3
+  m19 whole=crying/mid('cry') per=['grin', 'crying'] 2/2
+  m20 whole=content/mid('no rush') per=['listening', 'content'] 2/2
+  m21 whole=tender/mid('proud of you') per=['tender', 'drowsy'] 2/2
+  m22 whole=angry/mid('angry') per=['alarmed', 'angry'] 2/2
+  m23 whole=suspicious/mid('are you sure') per=['suspicious', 'skeptical', 'attentive'] 3/3
+  m24 whole=sad/mid('hurt') per=['delight', 'sad'] 2/2
+  m25 whole=content/mid('phew') per=['worried', 'happy', 'content'] 2/2
+
+COVERAGE: reachable 38/43; unreachable: ['rest', 'answering', 'dizzy', 'glitch', 'blink']
+  other paths: {'rest': ['BRAIN_STATES', 'SEQUENCES'], 'answering': ['BRAIN_STATES'], 'dizzy': [], 'glitch': [], 'blink': []}
+SHADOWED keywords (5 of 981):
+  delight:'bhari' always loses to attentive via None
+  happy:'आनंद' always loses to attentive via None
+  happy:'anand' always loses to attentive via None
+  alarmed:'fell' always loses to attentive via None
+  proud:'came first' always loses to delight via 'came first'
+  keywords in two families: {'बरं वाटलं': ['happy', 'happy'], 'dukhi': ['sad', 'sad'], 'एकटं': ['sad', 'sad']}
+
+SUBSTRING PROBES: 1/25 false positives
+  ok 'I studied all night for the exam' -> attentive (why=None)
+  ok 'My father retired last year' -> sad (why='model:sadness 0.67')
+  ok 'Mehndi function is tomorrow at 5' -> attentive (why=None)
+  ok 'Mehta uncle is coming over' -> attentive (why=None)
+  ok 'Bring the prasad from the temple' -> attentive (why=None)
+  ok 'Sadashiv kaka called' -> attentive (why=None)
+  ok 'Can you help me with my homework' -> attentive (why=None)
+  ok 'Help me find my keys' -> searching (why='find')
+  ok 'Update the emergency contact list' -> attentive (why=None)
+  ok 'Rahul got fired from his job' -> sad (why='got fired')
+  ok 'Buy firewood for the bonfire' -> attentive (why=None)
+  ok 'Please take out the rubbish' -> attentive (why=None)
+  ok 'Do we have enough rice for tonight' -> attentive (why=None)
+  ok 'Turn on do not disturb mode' -> attentive (why=None)
+  ok 'She is being pushy about the wedding' -> attentive (why=None)
+  ok 'They said the bus is late' -> attentive (why=None)
+  ok 'Is this plastic sustainable' -> attentive (why=None)
+  ok 'Jesus, that was loud' -> attentive (why=None)
+  ok 'The milk is best before Monday' -> attentive (why=None)
+  FP 'Take care of the electricity bill' -> tender (why='model:caring 0.89')
+  ok 'Please research flights to Goa' -> attentive (why=None)
+  ok 'Happy Thanksgiving to the cousins in the US' -> happy (why='happy')
+  ok "I'll explain later, I'm driving" -> attentive (why=None)
+  ok 'Yahi rakh do, kabhi bhi le lena' -> attentive (why=None)
+  ok 'He spoke calmly but he was angry' -> angry (why='angry')
+  ok 'Abhi aata hoon' -> attentive (why=None)
+SHADOW PROBES: 20/20 right
+  ok  "I'm really tired" -> drowsy (why='tired') expected ['drowsy']
+  ok  "I'm really bored" -> bored (why='bored') expected ['bored']
+  ok  "I really don't understand this form" -> confusion (why="don't understand") expected ['confusion']
+  ok  "I'm really embarrassed" -> shy (why='embarrass*') expected ['shy']
+  ok  "seriously, I'm exhausted" -> drowsy (why='exhausted') expected ['drowsy']
+  ok  'Sorry to hear your father died' -> crying (why='died') expected ['sad', 'crying', 'tender']
+  ok  "I'm so happy I'm crying" -> delight (why='crying (happy tears)') expected ['delight', 'happy']
+  ok  "Thanks, but I'm heartbroken" -> crying (why='heartbroken') expected ['crying', 'sad']
+  ok  "Good night, I'm going to bed" -> asleep (why='good night') expected ['asleep', 'tender', 'drowsy']
+  ok  "Take care, I'm terrified for you" -> dread (why='terrified') expected ['dread', 'worried']
+  ok  "I'm proud of myself, I finished the report" -> proud (why='proud of myself') expected ['proud']
+  ok  "I'm proud of myself" -> proud (why='proud of myself') expected ['proud']
+  ok  "I'm so worried, what if it's an emergency" -> worried (why='worried') expected ['worried', 'dread']
+  ok  "Thank you so much, I'm so happy" -> tender (why='thank you') expected ['delight', 'happy', 'tender']
+  ok  "I'm happy but also really worried" -> worried (why='worried') expected ['worried', 'happy', 'fret']
+  ok  "I think I'm going to cry" -> crying (why='cry') expected ['sad', 'crying']
+  ok  "I think my mother is sick, I'm scared" -> worried (why='sick') expected ['worried', 'dread']
+  ok  "Sorry, I'm so tired today" -> apologetic (why='sorry') expected ['drowsy', 'apologetic']
+  ok  "Hey, I'm feeling sad" -> sad (why='sad') expected ['sad']
+  ok  'Hello, the house is on fire!' -> alarmed (why='on fire') expected ['dread', 'alarmed', 'startled']
+LEVEL PROBES: 0/10 pairs misjudged
+  same 'going to the supermarket!'=mid  'going to the shop!'=mid
+  same 'every day is the same!'=mid  'each day is the same!'=mid
+  same 'I never said that!'=mid  "I didn't say that!"=mid
+  same 'so that we can leave early!'=mid  'then we can leave early!'=mid
+  same 'pay the EMI today'=mid  'pay the loan today'=mid
+  same 'send the OTP to Aai'=mid  'send the code to Aai'=mid
+  same "I'd rather stay home today"=mid  "I'd prefer to stay home today"=mid
+  same 'just a reminder, the gas man comes at 4'=mid  'reminder, the gas man comes at 4'=mid
+  same 'hmmm ok'=low  'hmm ok'=low
+  same 'the www site is down'=mid  'the web site is down'=mid
+  same 'the kids are absolutely fine'=mid  'the kids are fine'=mid  (control)
+APOSTROPHE PROBES:
+  'dont tell mom' -> ['mischief', 'mid', 0.85, "don't tell"]
+  'i dont understand' -> ['confusion', 'mid', 0.85, "don't understand"]
+  'whats the time' -> ['curious', 'mid', 0.85, "what's"]
+  'thank u' -> ['tender', 'low', 0.45, 'thank you']
+  'thx' -> ['tender', 'low', 0.45, 'thanks']
+  'ty' -> ['tender', 'low', 0.45, 'thanks']
+  'im sad' -> ['sad', 'mid', 0.85, 'sad']
+  'im so tired' -> ['drowsy', 'mid', 0.85, 'tired']
+
+SPEED: 3819.2 us/call over 31200 calls; longest input (258 chars) 163.6 us
+pygame-ce 2.5.8 (SDL 2.32.10, Python 3.12.14)
+
+LEVEL INTEGRITY
+  table problems: none
+  using _DEFAULT_LEVELS: ['searching', 'confusion', 'wink', 'bored', 'dizzy', 'curious', 'proud', 'mischief', 'shy', 'squint', 'focused', 'yawn', 'waking', 'tender', 'peek', 'drowsy']
+  rest        lv=(0.75, 1.0, 1.15) restdist(pose)=0.00 L2 lo-mid=0.000 mid-hi=0.000 px lo-mid=0.0% mid-hi=0.0% noise=2.1% settled_dev=0.134 struct=- broken={}
+  listening   lv=(0.4, 1.0, 1.5) restdist(pose)=0.37 L2 lo-mid=0.223 mid-hi=0.186 px lo-mid=6.1% mid-hi=5.4% noise=2.0% settled_dev=0.071 struct=- broken={}
+  thinking    lv=(0.55, 0.9, 1.25) restdist(pose)=1.22 L2 lo-mid=0.425 mid-hi=0.425 px lo-mid=6.5% mid-hi=6.4% noise=3.8% settled_dev=0.193 struct=- broken={}
+  searching   lv=(0.45, 0.85, 1.3) restdist(pose)=1.62 L2 lo-mid=0.647 mid-hi=0.548 px lo-mid=9.7% mid-hi=10.1% noise=1.4% settled_dev=0.039 struct=- broken={'intense': ['L.radius=0.524', 'R.radius=0.524']}
+  answering   lv=(0.45, 1.0, 1.5) restdist(pose)=0.35 L2 lo-mid=0.195 mid-hi=0.177 px lo-mid=0.9% mid-hi=1.5% noise=1.6% settled_dev=0.124 struct=- broken={}
+  delight     lv=(0.42, 0.88, 1.5) restdist(pose)=1.93 L2 lo-mid=0.603 mid-hi=0.699 px lo-mid=11.8% mid-hi=12.0% noise=1.0% settled_dev=0.207 struct=- broken={}
+  confusion   lv=(0.45, 0.85, 1.3) restdist(pose)=1.05 L2 lo-mid=0.421 mid-hi=0.474 px lo-mid=7.7% mid-hi=7.9% noise=4.3% settled_dev=0.084 struct=- broken={'intense': ['L.radius=0.524']}
+  apologetic  lv=(0.42, 0.85, 1.18) restdist(pose)=1.50 L2 lo-mid=0.645 mid-hi=0.495 px lo-mid=7.0% mid-hi=4.0% noise=0.8% settled_dev=0.096 struct=- broken={}
+  asleep      lv=(0.8, 1.0, 1.25) restdist(pose)=2.07 L2 lo-mid=0.303 mid-hi=0.275 px lo-mid=5.1% mid-hi=3.2% noise=0.0% settled_dev=0.120 struct=- broken={'intense': ['L.radius=0.520', 'R.radius=0.520']}
+  happy       lv=(0.4, 0.85, 1.4) restdist(pose)=1.75 L2 lo-mid=0.467 mid-hi=0.564 px lo-mid=7.8% mid-hi=10.6% noise=1.0% settled_dev=0.146 struct=- broken={}
+  sad         lv=(0.4, 0.85, 1.2) restdist(pose)=1.36 L2 lo-mid=0.612 mid-hi=0.476 px lo-mid=11.6% mid-hi=4.1% noise=0.9% settled_dev=0.068 struct=- broken={}
+  angry       lv=(0.4, 0.88, 1.4) restdist(pose)=1.64 L2 lo-mid=0.789 mid-hi=0.854 px lo-mid=7.6% mid-hi=5.8% noise=0.4% settled_dev=0.063 struct=- broken={}
+  surprised   lv=(0.35, 0.85, 1.3) restdist(pose)=1.16 L2 lo-mid=0.578 mid-hi=0.520 px lo-mid=10.7% mid-hi=11.4% noise=0.7% settled_dev=0.066 struct=- broken={'intense': ['L.radius=0.524', 'R.radius=0.524']}
+  startled    lv=(0.35, 0.9, 1.35) restdist(pose)=1.59 L2 lo-mid=0.874 mid-hi=0.596 px lo-mid=15.6% mid-hi=15.2% noise=0.6% settled_dev=0.047 struct=- broken={'intense': ['L.radius=0.528', 'R.radius=0.528']}
+  love        lv=(0.42, 0.85, 1.38) restdist(pose)=0.81 L2 lo-mid=0.350 mid-hi=0.391 px lo-mid=6.7% mid-hi=7.6% noise=4.8% settled_dev=0.127 struct=- broken={}
+  wink        lv=(0.45, 0.85, 1.3) restdist(pose)=1.43 L2 lo-mid=0.408 mid-hi=0.459 px lo-mid=4.7% mid-hi=3.7% noise=0.8% settled_dev=0.161 struct=- broken={'intense': ['R.upper_lid=1.131', 'R.lids sum 1.13 (eye shut)']}
+  skeptical   lv=(0.48, 0.88, 1.28) restdist(pose)=1.05 L2 lo-mid=0.419 mid-hi=0.419 px lo-mid=6.1% mid-hi=5.2% noise=1.3% settled_dev=0.045 struct=- broken={}
+  bored       lv=(0.45, 0.85, 1.3) restdist(pose)=1.16 L2 lo-mid=0.464 mid-hi=0.522 px lo-mid=6.7% mid-hi=6.2% noise=1.8% settled_dev=0.124 struct=- broken={}
+  dizzy       lv=(0.45, 0.85, 1.3) restdist(pose)=1.55 L2 lo-mid=0.622 mid-hi=0.700 px lo-mid=10.1% mid-hi=11.4% noise=7.5% settled_dev=0.210 struct=- broken={}
+  curious     lv=(0.45, 0.85, 1.3) restdist(pose)=0.66 L2 lo-mid=0.264 mid-hi=0.297 px lo-mid=6.0% mid-hi=6.3% noise=5.1% settled_dev=0.148 struct=- broken={}
+  proud       lv=(0.45, 0.85, 1.3) restdist(pose)=0.68 L2 lo-mid=0.273 mid-hi=0.307 px lo-mid=4.0% mid-hi=4.0% noise=1.4% settled_dev=0.083 struct=- broken={}
+  worried     lv=(0.42, 0.85, 1.25) restdist(pose)=1.50 L2 lo-mid=0.643 mid-hi=0.599 px lo-mid=4.9% mid-hi=4.5% noise=3.2% settled_dev=0.142 struct=- broken={}
+  mischief    lv=(0.45, 0.85, 1.3) restdist(pose)=1.39 L2 lo-mid=0.555 mid-hi=0.624 px lo-mid=6.7% mid-hi=5.6% noise=2.0% settled_dev=0.128 struct=- broken={}
+  shy         lv=(0.45, 0.85, 1.3) restdist(pose)=1.34 L2 lo-mid=0.538 mid-hi=0.605 px lo-mid=7.3% mid-hi=5.5% noise=1.1% settled_dev=0.086 struct=- broken={}
+  squint      lv=(0.45, 0.85, 1.3) restdist(pose)=0.87 L2 lo-mid=0.348 mid-hi=0.392 px lo-mid=8.3% mid-hi=7.7% noise=0.8% settled_dev=0.118 struct=- broken={}
+  focused     lv=(0.45, 0.85, 1.3) restdist(pose)=0.65 L2 lo-mid=0.260 mid-hi=0.293 px lo-mid=6.1% mid-hi=6.0% noise=1.0% settled_dev=0.035 struct=- broken={}
+  yawn        lv=(0.45, 0.85, 1.3) restdist(pose)=1.57 L2 lo-mid=0.630 mid-hi=0.650 px lo-mid=10.3% mid-hi=7.5% noise=0.1% settled_dev=0.135 struct=- broken={}
+  waking      lv=(0.45, 0.85, 1.3) restdist(pose)=1.31 L2 lo-mid=0.525 mid-hi=0.591 px lo-mid=8.4% mid-hi=4.7% noise=0.1% settled_dev=0.069 struct=- broken={}
+  glitch      lv=(0.45, 1.0, 1.6) restdist(pose)=1.13 L2 lo-mid=0.620 mid-hi=0.676 px lo-mid=11.7% mid-hi=13.4% noise=7.9% settled_dev=0.366 struct=- broken={}
+  grin        lv=(0.4, 0.9, 1.45) restdist(pose)=2.00 L2 lo-mid=0.706 mid-hi=0.777 px lo-mid=12.4% mid-hi=11.7% noise=0.8% settled_dev=0.170 struct=- broken={}
+  oh          lv=(0.4, 0.85, 1.25) restdist(pose)=1.53 L2 lo-mid=0.687 mid-hi=0.459 px lo-mid=3.9% mid-hi=3.5% noise=1.3% settled_dev=0.066 struct=- broken={}
+  dread       lv=(0.45, 0.88, 1.22) restdist(pose)=1.69 L2 lo-mid=0.728 mid-hi=0.400 px lo-mid=6.7% mid-hi=4.5% noise=0.3% settled_dev=0.041 struct=- broken={}
+  suspicious  lv=(0.52, 0.9, 1.22) restdist(pose)=2.01 L2 lo-mid=0.661 mid-hi=0.493 px lo-mid=9.5% mid-hi=6.6% noise=0.5% settled_dev=0.066 struct=- broken={}
+  stern       lv=(0.5, 0.9, 1.28) restdist(pose)=1.98 L2 lo-mid=0.554 mid-hi=0.459 px lo-mid=8.7% mid-hi=6.8% noise=0.0% settled_dev=0.053 struct=- broken={}
+  fret        lv=(0.44, 0.86, 1.25) restdist(pose)=2.07 L2 lo-mid=0.636 mid-hi=0.591 px lo-mid=9.4% mid-hi=8.1% noise=0.9% settled_dev=0.210 struct=- broken={}
+  content     lv=(0.5, 0.9, 1.25) restdist(pose)=1.85 L2 lo-mid=0.479 mid-hi=0.419 px lo-mid=9.8% mid-hi=6.3% noise=0.0% settled_dev=0.161 struct=- broken={}
+  crying      lv=(0.45, 0.9, 1.22) restdist(pose)=1.77 L2 lo-mid=0.796 mid-hi=0.477 px lo-mid=14.1% mid-hi=5.1% noise=0.7% settled_dev=0.252 struct=- broken={}
+  tender      lv=(0.45, 0.85, 1.3) restdist(pose)=2.12 L2 lo-mid=0.485 mid-hi=0.546 px lo-mid=6.8% mid-hi=8.1% noise=0.0% settled_dev=0.164 struct=- broken={}
+  alarmed     lv=(0.38, 0.88, 1.3) restdist(pose)=2.18 L2 lo-mid=0.663 mid-hi=0.557 px lo-mid=8.2% mid-hi=8.6% noise=0.0% settled_dev=0.034 struct=- broken={}
+  peek        lv=(0.45, 0.85, 1.3) restdist(pose)=1.68 L2 lo-mid=0.363 mid-hi=0.409 px lo-mid=8.2% mid-hi=9.4% noise=3.1% settled_dev=0.151 struct=- broken={'intense': ['L.radius=0.524']}
+  attentive   lv=(0.4, 1.0, 1.5) restdist(pose)=1.10 L2 lo-mid=0.270 mid-hi=0.225 px lo-mid=6.2% mid-hi=6.3% noise=1.5% settled_dev=0.068 struct=- broken={'intense': ['L.radius=0.540', 'R.radius=0.540']}
+  drowsy      lv=(0.45, 0.85, 1.3) restdist(pose)=1.65 L2 lo-mid=0.523 mid-hi=0.586 px lo-mid=9.4% mid-hi=8.7% noise=1.1% settled_dev=0.131 struct=- broken={}
+  blink       lv=(1.0, 1.0, 1.0) restdist(pose)=1.98 L2 lo-mid=0.000 mid-hi=0.000 px lo-mid=0.0% mid-hi=0.0% noise=0.0% settled_dev=0.078 struct=- broken={'low': ['L.lids sum 0.97 (eye shut)', 'R.lids sum 0.97 (eye shut)'], 'mid': ['L.lids sum 0.97 (eye shut)', 'R.lids sum 0.97 (eye shut)'], 'intense': ['L.lids sum 0.97 (eye shut)', 'R.lids sum 0.97 (eye shut)']}
+
+wrote /Users/chirag.pawar/Desktop/Personal/TODO/tests/expression_results.json
