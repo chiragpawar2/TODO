@@ -271,7 +271,7 @@ function bestVoice(code){
 }
 function phoneSay(text,done){
   if(!canSpeak){ F.speak(text); setTimeout(done,320*text.split(/\s+/).length+400); return; }
-  const code=isDeva(text)?"hi-IN":"en-IN", u=new SpeechSynthesisUtterance(text);
+  const code=voiceLang(text), u=new SpeechSynthesisUtterance(text);
   u.lang=code; const v=bestVoice(code); if(v) u.voice=v; u.pitch=1.15; u.rate=1.03;
   let started=false; const face=()=>{ if(!started){ started=true; F.speak(text); } };
   u.onstart=face; u.onend=done; u.onerror=done;
@@ -311,35 +311,29 @@ async function decodeAudio(d){
   }
   return await ac.decodeAudioData(bytes.buffer);
 }
-const speech={q:[],playing:false,gen:0,src:null};
-function splitSentences(t){
-  const parts=String(t).replace(/\s+/g," ").trim().split(/(?<=[.!?।])\s+/), out=[];
-  for(const p of parts){ if(out.length&&out[out.length-1].length<14) out[out.length-1]+=" "+p; else if(p) out.push(p); }
-  return out;
-}
-function speakQueue(sentence){
-  const gen=speech.gen, job={text:sentence};
-  job.ready=(async()=>{ const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),6000);
-    const a=await geminiAudio(sentence,ctl.signal); clearTimeout(t);
-    if(!a||gen!==speech.gen) return null; try{ return await decodeAudio(a); }catch(e){ return null; } })();
-  speech.q.push(job); if(!speech.playing) playNext(gen);
-}
-async function playNext(gen){
+const speech={gen:0,src:null};
+// Marathi and Hindi share Devanagari, so pick the phone voice by the words.
+const MARATHI=/(आहे|नाही|मला|तुम्ही|तुला|काय|आहेत|होतं|झालं|आपण|करू|बघ)/;
+function voiceLang(t){ return isDeva(t)?(MARATHI.test(t)?"mr-IN":"hi-IN"):"en-IN"; }
+async function speakReply(text){
+  const gen=++speech.gen;
+  $("#caption").textContent=text;
+  const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),9000);
+  const a=await geminiAudio(text,ctl.signal); clearTimeout(t);
   if(gen!==speech.gen) return;
-  const job=speech.q.shift();
-  if(!job){ speech.playing=false; try{ F.hush(); }catch(e){} return; }
-  speech.playing=true;
-  const buf=await job.ready; if(gen!==speech.gen) return;
-  $("#caption").textContent=job.text;
-  const next=()=>{ if(gen===speech.gen) playNext(gen); };
+  let buf=null; if(a){ try{ buf=await decodeAudio(a); }catch(e){} }
+  if(gen!==speech.gen) return;
   if(buf){ const ac=audioCtx(), src=ac.createBufferSource(); src.buffer=buf; src.connect(ac.destination);
-    speech.src=src; src.onended=next; F.speak(job.text); src.start(); }
-  else phoneSay(job.text,next);
+    speech.src=src; src.onended=()=>{ if(gen===speech.gen) try{ F.hush(); }catch(e){} }; F.speak(text); src.start(); }
+  else phoneSay(text,()=>{ if(gen===speech.gen) try{ F.hush(); }catch(e){} });   // the whole reply in one voice, never mixed
 }
-function shush(){ speech.gen++; speech.q=[]; speech.playing=false;
+function shush(){ speech.gen++;
   try{ if(speech.src) speech.src.stop(); }catch(e){} speech.src=null;
   try{ if(canSpeak) speechSynthesis.cancel(); }catch(e){} try{ F.hush(); }catch(e){} }
-function say(text){ shush(); for(const s of splitSentences(text)) speakQueue(s); }
+function say(text){
+  if(live.on){ $("#caption").textContent=text; return; }   // in a Live conversation Gemini does the talking
+  shush(); speakReply(text);
+}
 
 /* ---------- icons (bold, single stroke family) ---------- */
 const I={
@@ -513,7 +507,7 @@ function persona(){
   return "You are homebot, the warm home assistant of an Indian family who speak Marathi, Hindi and English. "+
     "You live on a small screen with an expressive face, and everything you write is spoken aloud. "+
     "Reply in one to three short sentences. No markdown, no lists, no emoji, no symbols. "+
-    "Answer in the same language and script the person used; if they mix Hindi or Marathi with English, mix the same way. "+
+    "Always answer in the language the person just spoke: Marathi to Marathi, Hindi to Hindi, English to English. Never switch language in the middle of an answer. Write Marathi and Hindi in Devanagari. Mix Hindi or Marathi with English only if they mixed it themselves. "+
     "Be kind and practical. To change a list, tell them the exact words to say, for example: add eggs to groceries. "+
     "Today is "+new Date().toDateString()+".\nThe family's lists right now:\n"+lists;
 }
@@ -570,17 +564,133 @@ async function think(text,real){
   const thinkT=setTimeout(()=>{ if(!answered) F.flash("thinking",30); }, real.length?900:0);
   const res=await streamBrain(text,s=>{
     if(!answered){ answered=true; clearTimeout(thinkT);
-      // his answer gets its own face, through the same reader
       let rb=[]; try{ rb=(R.readBeats(s)||[]).filter(b=>b[0]!=="attentive"); }catch(e){}
       if(rb.length) F.playSteps(rb.map(b=>[b[0],b[4]||1.2,b[2]])); else F.flash("answering",3); }
-    speakQueue(s);
+    $("#caption").textContent=s;
   });
   clearTimeout(thinkT);
-  if(res&&res.err){ F.flash("apologetic",2.2); say(res.err); }
+  if(res&&res.err){ F.flash("apologetic",2.2); say(res.err); return; }
+  if(res&&res.text) say(clean(res.text).replace(/\s+/g," ").trim());
 }
 function showKey(){ const k=getKey(), el=$("#keystate");
   if(k){ el.textContent="Saved on this phone (…"+k.slice(-4)+")."; el.className="keystate ok"; }
   else { el.textContent="No key yet."; el.className="keystate"; } }
+
+/* ---------- Gemini Live: one Gemini model hears you and answers in its own voice ----------
+   Tap the mic once to start a conversation. Your voice streams straight to
+   Gemini; it decides when you have finished speaking (1.2 s of silence), hears
+   Marathi, Hindi and English as they are, and answers aloud in the same
+   language with one natural voice. Tap again to end. If Live is unavailable
+   (no key, no support, or the free quota is used up), the app falls back to
+   the browser's speech recognition + Gemini text + one voice per reply. */
+const LIVE_MODELS=["gemini-3.1-flash-live-preview","gemini-2.5-flash-native-audio-latest"];
+const live={on:false,ws:null,model:null,stream:null,src:null,node:null,playAt:0,sources:[],userText:"",botText:"",faceSet:false};
+let liveDownUntil=0;
+const MIC_WORKLET=`class Mic16k extends AudioWorkletProcessor{
+  constructor(){ super(); this.ratio=sampleRate/16000; this.acc=0; this.buf=[]; }
+  process(inputs){ const ch=inputs[0]&&inputs[0][0]; if(!ch) return true;
+    for(let i=0;i<ch.length;i++){ this.acc+=1; if(this.acc>=this.ratio){ this.acc-=this.ratio;
+      const v=Math.max(-1,Math.min(1,ch[i])); this.buf.push(v<0?v*32768:v*32767); } }
+    if(this.buf.length>=1600){ const out=new Int16Array(this.buf); this.buf=[]; this.port.postMessage(out.buffer,[out.buffer]); }
+    return true; } }
+registerProcessor("mic16k",Mic16k);`;
+function ab2b64(buf){ const b=new Uint8Array(buf); let s=""; for(let i=0;i<b.length;i+=0x8000) s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000)); return btoa(s); }
+function livePersona(){
+  const lists=data.lists.map(l=>l.title+": "+(left(l).map(i=>i.text).join(", ")||"(all done)")).join("\n");
+  return "You are homebot, the warm home assistant of an Indian family who speak Marathi, Hindi and English. "+
+    "You live on a small screen with an expressive face, and you talk out loud. "+
+    "Always answer in the language the person just spoke: Marathi to Marathi, Hindi to Hindi, English to English. "+
+    "Never switch language in the middle of an answer. Mix Hindi or Marathi with English only if they mixed it themselves. "+
+    "Keep answers short: one to three sentences. Be kind and practical. "+
+    "The app changes the family's lists itself when they ask, for example: add eggs to groceries. Just confirm the change briefly. "+
+    "Today is "+new Date().toDateString()+".\nThe family's lists right now:\n"+lists;
+}
+function liveCapable(){ return !!(getKey()&&window.WebSocket&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.AudioWorkletNode&&Date.now()>liveDownUntil); }
+function liveConnect(model,key){ return new Promise(resolve=>{
+  let settled=false; const fin=v=>{ if(!settled){ settled=true; clearTimeout(timer); resolve(v); } };
+  let ws; try{ ws=new WebSocket("wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key="+encodeURIComponent(key)); }catch(e){ resolve(false); return; }
+  const timer=setTimeout(()=>{ try{ ws.close(); }catch(e){} fin(false); },8000);
+  ws.onopen=()=>ws.send(JSON.stringify({setup:{model:"models/"+model,
+    generationConfig:{responseModalities:["AUDIO"],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:TTS_VOICE}}}},
+    systemInstruction:{parts:[{text:livePersona()}]},
+    realtimeInputConfig:{automaticActivityDetection:{silenceDurationMs:1200}},
+    inputAudioTranscription:{},outputAudioTranscription:{}}}));
+  ws.onmessage=async ev=>{ let m; try{ m=JSON.parse(typeof ev.data==="string"?ev.data:await ev.data.text()); }catch(e){ return; }
+    if(m.setupComplete){ live.ws=ws; live.model=model; fin(true); return; }
+    if(live.ws===ws) onLive(m); };
+  ws.onerror=()=>fin(false);
+  ws.onclose=e=>{ fin(false);
+    if(live.ws===ws){ live.ws=null;
+      if(live.on){ const quota=/quota|exhaust|limit/i.test(e.reason||""); liveStop();
+        if(quota){ liveDownUntil=Date.now()+30*60*1000; say("I've used up today's free conversation time. Tap the mic and I'll answer the slower way."); }
+        else if(e.code!==1000) say("The conversation ended. Tap the mic to talk again."); } } };
+}); }
+async function liveStart(){
+  const key=getKey(), ac=audioCtx();
+  try{ live.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}}); }
+  catch(e){ say("The microphone is blocked. Allow it for this site in your browser settings, then tap the mic again."); return true; }
+  let ok=false; for(const m of LIVE_MODELS){ if(await liveConnect(m,key)){ ok=true; break; } }
+  if(!ok){ live.stream.getTracks().forEach(t=>t.stop()); live.stream=null; return false; }
+  try{
+    await ac.audioWorklet.addModule(URL.createObjectURL(new Blob([MIC_WORKLET],{type:"text/javascript"})));
+    const src=ac.createMediaStreamSource(live.stream), node=new AudioWorkletNode(ac,"mic16k"), mute=ac.createGain();
+    mute.gain.value=0; src.connect(node); node.connect(mute); mute.connect(ac.destination);
+    node.port.onmessage=e=>{ if(live.ws&&live.ws.readyState===1) live.ws.send(JSON.stringify({realtimeInput:{audio:{mimeType:"audio/pcm;rate=16000",data:ab2b64(e.data)}}})); };
+    live.src=src; live.node=node;
+  }catch(e){ liveStop(); return false; }
+  live.on=true; live.userText=""; live.botText=""; live.faceSet=false;
+  $("#micbtn").classList.add("on"); $("#micbtn").setAttribute("aria-label","End conversation");
+  $("#mic").classList.add("on"); $("#heard").textContent="I'm listening…"; $("#caption").textContent="";
+  F.flash("listening",600);
+  return true;
+}
+function stopPlayback(){ for(const s of live.sources){ try{ s.stop(); }catch(e){} } live.sources=[]; live.playAt=0; try{ F.hush(); }catch(e){} }
+function liveStop(){
+  live.on=false;
+  try{ if(live.ws){ const w=live.ws; live.ws=null; w.close(1000); } }catch(e){}
+  try{ live.node&&live.node.disconnect(); live.src&&live.src.disconnect(); }catch(e){}
+  try{ live.stream&&live.stream.getTracks().forEach(t=>t.stop()); }catch(e){}
+  live.node=live.src=live.stream=null; stopPlayback();
+  $("#micbtn").classList.remove("on"); $("#micbtn").setAttribute("aria-label","Talk to homebot"); $("#mic").classList.remove("on");
+  F.flash("rest",.4);
+}
+function playPcm(b64,rate){
+  const ac=audioCtx(), bin=atob(b64), n=bin.length>>1, buf=ac.createBuffer(1,n,rate), ch=buf.getChannelData(0);
+  for(let i=0;i<n;i++){ let v=bin.charCodeAt(2*i)|(bin.charCodeAt(2*i+1)<<8); if(v>=32768) v-=65536; ch[i]=v/32768; }
+  const s=ac.createBufferSource(); s.buffer=buf; s.connect(ac.destination);
+  const at=Math.max(ac.currentTime+0.04,live.playAt); s.start(at); live.playAt=at+buf.duration; live.sources.push(s);
+  s.onended=()=>{ live.sources=live.sources.filter(x=>x!==s); if(!live.sources.length){ try{ F.hush(); }catch(e){} } };
+}
+// When you finish speaking: his face reads your feeling, and any list change happens.
+function liveUser(t){
+  $("#heard").textContent="“"+t+"”";
+  feel(t);
+  let r; try{ r=command(t); }catch(e){}
+  if(r!==undefined&&live.ws&&live.ws.readyState===1)   // tell Gemini what the lists look like now, without asking it to reply
+    live.ws.send(JSON.stringify({clientContent:{turns:[{role:"user",parts:[{text:"(App note, do not reply to this: the lists are now:\n"+data.lists.map(l=>l.title+": "+(left(l).map(i=>i.text).join(", ")||"(all done)")).join("\n")+")"}]}],turnComplete:false}}));
+}
+function onLive(m){
+  const sc=m.serverContent; if(!sc) return;
+  if(sc.interrupted){ stopPlayback(); live.botText=""; live.faceSet=false; }
+  if(sc.inputTranscription&&sc.inputTranscription.text){
+    live.userText+=sc.inputTranscription.text; $("#mic").classList.add("on"); $("#heard").textContent="“"+live.userText.trim()+"”"; }
+  const parts=(sc.modelTurn&&sc.modelTurn.parts)||[];
+  if(parts.length){
+    if(live.userText.trim()){ liveUser(live.userText.trim()); live.userText=""; }
+    $("#mic").classList.remove("on");
+    for(const p of parts) if(p.inlineData&&/audio/.test(p.inlineData.mimeType||"")){ const r=/rate=(\d+)/.exec(p.inlineData.mimeType); playPcm(p.inlineData.data,r?+r[1]:24000); }
+  }
+  if(sc.outputTranscription&&sc.outputTranscription.text){
+    live.botText+=sc.outputTranscription.text;
+    const words=live.botText.trim().split(/\s+/); $("#caption").textContent=words.slice(-14).join(" ");
+    try{ F.speak(sc.outputTranscription.text); }catch(e){}   // the mouth follows his words as they arrive
+    if(!live.faceSet&&live.botText.length>24){ live.faceSet=true;
+      let rb=[]; try{ rb=(R.readBeats(live.botText)||[]).filter(b=>b[0]!=="attentive"); }catch(e){}
+      if(rb.length) F.playSteps(rb.slice(0,1).map(b=>[b[0],2.5,b[2]])); }
+  }
+  if(sc.turnComplete){ if(live.userText.trim()){ liveUser(live.userText.trim()); live.userText=""; }
+    live.botText=""; live.faceSet=false; $("#heard").textContent="I'm listening…"; $("#mic").classList.add("on"); }
+}
 
 /* ---------- listening: hears the whole thing ----------
    continuous=false made the phone stop at the first short pause, so he answered
@@ -596,10 +706,14 @@ function talkUI(on){ listening=on; $("#micbtn").classList.toggle("on",on); $("#m
 function armSilence(ms){ clearTimeout(silenceT); silenceT=setTimeout(finishTurn,ms); }
 function finishTurn(){ clearTimeout(silenceT); endTurn=true; try{ rec&&rec.stop(); }catch(e){} }
 function goFull(){ try{ const d=document.documentElement; if(!document.fullscreenElement&&d.requestFullscreen) d.requestFullscreen().then(()=>{ try{ screen.orientation.lock("landscape").catch(()=>{}); }catch(e){} }).catch(()=>{}); }catch(e){} }
-function talk(){
+async function talk(){
   audioCtx(); goFull();
+  if(live.on){ liveStop(); return; }
   if(listening){ finishTurn(); return; }
   shush();
+  if(liveCapable()){ $("#heard").textContent="Connecting…"; $("#mic").classList.add("on");
+    if(await liveStart()) return;
+    liveDownUntil=Date.now()+5*60*1000; $("#mic").classList.remove("on"); }
   if(!SR){ say("This browser can't listen. Use Chrome on Android or Safari on iPhone."); return; }
   finalText=""; interimText=""; endTurn=false; $("#heard").textContent="Listening…"; startRec(true);
 }
