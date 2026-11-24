@@ -1,64 +1,64 @@
-<title>homebot Lists</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<title>homebot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: device screen (800x480, scaled to fit) beside a voice console; notes below.
-   The CRT look belongs to the face only. Every piece of interface is flat, crisp
-   and glow-free: one surface step, one accent, hairlines, no text effects. */
-:root{
-  /* page (theme-aware) */
-  --bg:#f4f5f7; --fg:#15181e; --fg2:#5d6573; --card:#ffffff; --line:#e1e4ea; --accent:#2f6fe4;
-  --font:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0c0d10; --fg:#eef1f5; --fg2:#99a1ae; --card:#15171c; --line:#262a32; --accent:#6b9cff; color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#0c0d10; --fg:#eef1f5; --fg2:#99a1ae; --card:#15171c; --line:#262a32; --accent:#6b9cff; color-scheme:dark}
-html,body{background:var(--bg);color:var(--fg)}
-body{font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
-.wrap{max-width:1220px;margin:0 auto;display:grid;gap:24px}
-.page-h h1{margin:0 0 4px;font-size:clamp(22px,3vw,30px);font-weight:700;letter-spacing:-.015em;text-wrap:balance}
-.page-h p{margin:0;color:var(--fg2);max-width:70ch}
-.stage{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
-@media (max-width:980px){.stage{grid-template-columns:minmax(0,1fr)}}
-
-/* ---------- device: fixed dark, it is an OLED panel ---------- */
-.device{position:relative;width:100%;aspect-ratio:820/500;max-width:100%}
-.bezel{position:absolute;left:0;top:0;width:820px;height:500px;transform-origin:0 0;will-change:transform;background:#1c1d20;border-radius:26px;padding:10px;box-sizing:border-box;
-  box-shadow:0 24px 60px -28px rgba(0,0,0,.55),inset 0 0 0 1px #2c2d31}
+/* Layout: the display IS the app. The screen is a fixed 480 px tall and as wide
+   as the phone's landscape shape needs, scaled to fill everything inside the safe
+   areas, so it fits any phone held sideways. Only the face carries the CRT look;
+   all interface is flat, crisp and glow-free. Two controls live on the display:
+   the mic (bottom right) and a muted settings icon (bottom left). */
+:root{--font:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:dark}
+html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;overscroll-behavior:none;
+  touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#stage{position:fixed;inset:0;box-sizing:border-box;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+#stage .inner{position:relative;width:100%;height:100%}
 .screen{
   --s0:#080a0e; --s1:#121419; --s2:#1a1d24; --hl:#272b34; --t1:#f3f5f8; --t2:#9aa3b2; --t3:#646c7a;
-  --acc:#5b8def; --acc-ink:#ffffff; --ok:#5b8def; --danger:#ff6b6b;
-  position:relative;width:800px;height:480px;background:var(--s0);border-radius:16px;overflow:hidden;contain:strict;
+  --acc:#5b8def; --acc-ink:#ffffff; --ok:#5b8def; --danger:#ff6b6b; --sw:800px;
+  position:absolute;left:50%;top:50%;width:800px;height:480px;transform:translate(-50%,-50%);transform-origin:center;
+  background:var(--s0);overflow:hidden;contain:strict;
   font-family:var(--font);color:var(--t1);font-feature-settings:"tnum" 1;-webkit-font-smoothing:antialiased}
 
-/* the face: full screen at home, a live face button in the top-right otherwise */
-#facebox{position:absolute;z-index:5;left:0;top:0;width:800px;height:480px;border-radius:0;overflow:hidden;
+/* the face: centred at home, a live face button in the top-right otherwise */
+#facebox{position:absolute;z-index:5;left:calc((var(--sw) - 800px) / 2);top:0;width:800px;height:480px;border-radius:0;overflow:hidden;
   transition:left .38s cubic-bezier(.2,.8,.2,1),top .38s cubic-bezier(.2,.8,.2,1),width .38s cubic-bezier(.2,.8,.2,1),height .38s cubic-bezier(.2,.8,.2,1),border-radius .38s}
 #facebox canvas{width:100%;height:100%;display:block;will-change:transform}
 #facebox::after{content:"";position:absolute;inset:0;pointer-events:none;
   background:repeating-linear-gradient(to bottom,transparent 0 2px,rgba(0,0,0,.26) 2px 3px);transition:opacity .3s}
-.screen.ui #facebox{left:700px;top:12px;width:88px;height:56px;border-radius:14px;cursor:pointer;box-shadow:0 0 0 1px var(--hl)}
+.screen.ui #facebox{left:calc(var(--sw) - 100px);top:12px;width:88px;height:56px;border-radius:14px;cursor:pointer;box-shadow:0 0 0 1px var(--hl)}
 .screen.ui #facebox::after{opacity:0}
 #facebox:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 
 /* home: bold list button, top right */
-.listbtn{position:absolute;z-index:20;right:16px;top:14px;width:60px;height:60px;border-radius:18px;display:grid;place-items:center;cursor:pointer;
+.listbtn{position:absolute;z-index:20;right:18px;top:16px;width:60px;height:60px;border-radius:18px;display:grid;place-items:center;cursor:pointer;
   background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);color:#fff}
 .listbtn svg{width:30px;height:30px}
 .listbtn:active{transform:scale(.96)}
 .screen.ui .listbtn{display:none}
-.caption{position:absolute;z-index:20;left:0;right:0;bottom:22px;text-align:center;padding:0 80px;
-  font-size:21px;font-weight:500;color:rgba(243,245,248,.88);min-height:28px}
-.screen.ui .caption{display:none}
+.caption{position:absolute;z-index:20;left:0;right:0;bottom:30px;text-align:center;padding:0 120px;
+  font-size:21px;font-weight:500;line-height:1.3;color:rgba(243,245,248,.88);min-height:28px;transition:opacity .2s}
+.screen.ui .caption,.screen.listening .caption{opacity:0}
+
+/* the two display controls */
+.dctl{position:absolute;z-index:26;bottom:18px;display:grid;place-items:center;cursor:pointer;padding:0;color:#fff}
+#micbtn{right:18px;width:76px;height:76px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22)}
+#micbtn svg{width:32px;height:32px}
+#micbtn.on{background:#e5484d;border-color:#e5484d}
+#micbtn.on::before{content:"";position:absolute;inset:-8px;border-radius:50%;border:2px solid rgba(229,72,77,.55);animation:ring 1.4s ease-out infinite}
+@keyframes ring{from{transform:scale(.85);opacity:1}to{transform:scale(1.25);opacity:0}}
+#micbtn:active{transform:scale(.96)}
+#gear{left:18px;bottom:24px;width:52px;height:52px;border-radius:50%;background:transparent;border:0;color:rgba(243,245,248,.32)}
+#gear svg{width:26px;height:26px}
+#gear:active{color:rgba(243,245,248,.6)}
+.dctl:focus-visible{outline:2px solid var(--acc);outline-offset:3px}
 
 /* interface layer */
 #ui{position:absolute;inset:0;z-index:4;background:var(--s0);display:none;flex-direction:column}
 .screen.ui #ui{display:flex}
 .bar{height:80px;flex:none;display:flex;align-items:center;gap:10px;padding:0 116px 0 16px;border-bottom:1px solid var(--s2)}
 .bar .name{flex:1;min-width:0;font-size:24px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bar .name input{font:inherit;color:var(--t1);background:var(--s1);border:1.5px solid var(--acc);border-radius:12px;padding:6px 12px;width:100%;outline:none}
+.bar .name input{font:inherit;color:var(--t1);background:var(--s1);border:1.5px solid var(--acc);border-radius:12px;padding:6px 12px;width:100%;outline:none;-webkit-user-select:text;user-select:text}
 .ib{flex:none;width:52px;height:52px;border-radius:14px;display:grid;place-items:center;cursor:pointer;background:var(--s1);border:1px solid var(--hl);color:var(--t1)}
 .ib svg{width:22px;height:22px}
 .ib.play{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
@@ -66,10 +66,10 @@ body{font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothi
 .ib.del{color:var(--danger)}
 .ib[disabled]{opacity:.35;cursor:default}
 .ib:focus-visible,.card:focus-visible,.check:focus-visible,.btn:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-.scroll{flex:1;overflow-y:auto;padding:16px 16px 20px;scrollbar-width:thin;scrollbar-color:var(--hl) transparent}
+.scroll{flex:1;overflow-y:auto;padding:16px 16px 104px;scrollbar-width:thin;scrollbar-color:var(--hl) transparent}
 
 /* lists grid: no page title, straight to the lists */
-.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
 .card{background:var(--s1);border:1px solid var(--s2);border-radius:16px;padding:16px;min-height:140px;cursor:pointer;text-align:left;color:var(--t1);
   font-family:inherit;display:flex;flex-direction:column;gap:8px}
 .card h3{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
@@ -90,7 +90,7 @@ body{font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothi
 .row .txt{flex:1;min-width:0;font-size:21px;font-weight:500;line-height:1.3;cursor:text;padding:8px 0}
 .row.done .txt{color:var(--t3);text-decoration:line-through;text-decoration-thickness:1.5px}
 .row .edit{flex:1;display:flex;gap:8px;align-items:center}
-.field{font:inherit;font-size:20px;font-weight:500;color:var(--t1);background:var(--s1);border:1.5px solid var(--hl);border-radius:12px;padding:0 14px;height:52px;width:100%;outline:none;box-sizing:border-box}
+.field{font:inherit;font-size:20px;font-weight:500;color:var(--t1);background:var(--s1);border:1.5px solid var(--hl);border-radius:12px;padding:0 14px;height:52px;width:100%;outline:none;box-sizing:border-box;-webkit-user-select:text;user-select:text}
 .field:focus{border-color:var(--acc)}
 .btn{flex:none;height:52px;padding:0 18px;border-radius:12px;font:600 17px/1 var(--font);cursor:pointer;display:inline-flex;align-items:center;gap:8px;
   background:var(--s1);color:var(--t1);border:1px solid var(--hl);box-sizing:border-box}
@@ -98,6 +98,7 @@ body{font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothi
 .btn.primary{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
 .btn.danger{color:var(--danger)}
 .btn.quiet{background:transparent;border-color:transparent;color:var(--t2)}
+.btn[disabled]{opacity:.5;cursor:default}
 .add{display:flex;gap:10px;margin:14px 0 4px;align-items:stretch}
 .sect{margin:20px 0 2px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);display:flex;align-items:center;gap:8px;justify-content:space-between}
 .empty{color:var(--t2);font-size:18px;padding:22px 0 8px}
@@ -117,168 +118,92 @@ body{font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothi
 .sheet p{margin:0;color:var(--t2);font-size:16px}
 .sheet .acts{display:flex;justify-content:flex-end;gap:10px}
 
-/* listening pill */
-.mic{position:absolute;z-index:30;left:50%;bottom:14px;transform:translate(-50%,90px);transition:transform .25s;display:flex;align-items:center;gap:12px;
-  height:46px;padding:0 18px;border-radius:23px;background:var(--s2);border:1px solid var(--hl);font-size:17px;font-weight:500;max-width:620px;white-space:nowrap;overflow:hidden}
+/* live transcript while listening */
+.mic{position:absolute;z-index:24;left:50%;bottom:30px;transform:translate(-50%,90px);transition:transform .25s;display:flex;align-items:center;gap:12px;
+  min-height:46px;padding:8px 18px;box-sizing:border-box;border-radius:23px;background:var(--s2);border:1px solid var(--hl);
+  font-size:18px;font-weight:500;line-height:1.3;max-width:calc(var(--sw) - 260px);overflow:hidden}
 .mic.on{transform:translate(-50%,0)}
 .mic .dot{width:10px;height:10px;border-radius:50%;background:var(--danger);flex:none}
-@media (prefers-reduced-motion:reduce){#facebox,.mic,.track i{transition:none}}
+.mic span:last-child{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
-/* ---------- console ---------- */
-.console{display:grid;gap:14px;min-width:0}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
-.panel h3{margin:0 0 2px;font-size:15px;font-weight:700}
-.panel .hint{margin:0 0 12px;color:var(--fg2);font-size:13.5px}
-.say{display:flex;gap:8px}
-.say input{flex:1;min-width:0;height:42px;box-sizing:border-box;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--fg);padding:0 12px;font:15px var(--font)}
-.say input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
-.say button{height:42px;background:var(--accent);border:0;color:#fff;border-radius:10px;padding:0 16px;font:600 14px var(--font);cursor:pointer}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
-.chip{border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:999px;padding:6px 11px;font:13.5px var(--font);cursor:pointer;text-align:left}
-.chip:hover{border-color:var(--accent)}
-.log{display:grid;gap:8px;max-height:230px;overflow-y:auto;font-size:14px}
-.log div{display:grid;grid-template-columns:44px 1fr;gap:6px}
-.log b{font-weight:600;color:var(--fg2);font-size:12.5px;padding-top:1px}
-.log .f{color:var(--fg2);font-size:12.5px;grid-column:2}
-.note{font-size:13px;color:var(--fg2);margin:10px 2px 0}
-.talkbar{display:flex;gap:8px;align-items:stretch;margin-bottom:12px}
-.talk{flex:1;height:56px;border:0;border-radius:14px;background:var(--accent);color:#fff;font:700 17px var(--font);display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer}
-.talk svg{width:22px;height:22px}
-.talk.on{background:#e5484d}
-.talk.on .dotp{animation:pulse 1s infinite}
-@keyframes pulse{50%{opacity:.35}}
-.langsel{height:56px;border-radius:14px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:600 15px var(--font);padding:0 10px}
-.toggle{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--fg2);margin:4px 0 12px}
-.toggle input{width:18px;height:18px;accent-color:var(--accent)}
-.keystate{margin:8px 0 0;font-size:13.5px;color:var(--fg2)}
-.keystate.ok{color:#2f9e6b}
-.mtrack{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin:10px 0 8px}
-.mtrack i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
-.mrow{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.mbtn{height:40px;padding:0 16px;border-radius:10px;border:0;background:var(--accent);color:#fff;font:600 14px var(--font);cursor:pointer}
-.mbtn[disabled]{opacity:.5;cursor:default}
-@media (max-width:980px){ .talkpanel{position:sticky;bottom:max(10px,env(safe-area-inset-bottom,0px));z-index:5;box-shadow:0 10px 30px -10px rgba(0,0,0,.35)} }
-@media (prefers-reduced-motion:reduce){.talk.on .dotp{animation:none}}
+/* settings: brain key and emotion model, nothing else */
+.settings{position:absolute;inset:0;z-index:50;background:rgba(4,5,8,.82);display:grid;place-items:center}
+.sbox{width:min(700px,calc(var(--sw) - 48px));background:var(--s1);border:1px solid var(--hl);border-radius:20px;padding:20px 22px 22px;box-sizing:border-box}
+.shead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.shead h2{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em}
+.scols{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.scols section{display:flex;flex-direction:column;gap:10px;min-width:0}
+.scols h3{margin:0;font-size:17px;font-weight:700}
+.hint{margin:0;color:var(--t2);font-size:14.5px;line-height:1.4}
+.krow{display:flex;gap:8px}
+.krow .field{font-size:17px}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.keystate{font-size:14.5px;color:var(--t2)}
+.keystate.ok{color:#5fd39a}
+.mtrack{height:8px;border-radius:4px;background:var(--s2);overflow:hidden}
+.mtrack i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
 
-/* ---------- notes ---------- */
-.notes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-@media (max-width:980px){.notes{grid-template-columns:minmax(0,1fr)}}
-.notes h3{margin:0 0 8px;font-size:15px;font-weight:700}
-.notes ul{margin:0;padding-left:18px;display:grid;gap:5px;color:var(--fg2);font-size:14px}
-.notes code{font:12.5px ui-monospace,Menlo,monospace;background:var(--bg);border:1px solid var(--line);padding:0 5px;border-radius:5px;color:var(--fg)}
-.tbl{overflow-x:auto}
-.tbl table{border-collapse:collapse;width:100%;font-size:13.5px}
-.tbl td{padding:6px 8px;border-top:1px solid var(--line);color:var(--fg2);vertical-align:top}
-.tbl td:first-child{color:var(--fg);white-space:nowrap;font-weight:500}
+/* held upright: ask for landscape */
+#rotate{display:none;position:fixed;inset:0;z-index:100;background:#080a0e;color:#f3f5f8;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  font:600 19px var(--font);text-align:center;padding:24px}
+#rotate svg{width:72px;height:72px;color:rgba(243,245,248,.75)}
+@media (orientation:portrait) and (max-width:900px){#rotate{display:flex}}
+@media (prefers-reduced-motion:reduce){#facebox,.mic,.track i{transition:none}#micbtn.on::before{animation:none}}
 </style>
 
-<div class="wrap">
-  <header class="page-h">
-    <h1>homebot Lists</h1>
-    <p>Tap <b>Talk</b> and speak in English, Hindi or Marathi. He listens, reads how you feel, answers out loud, and looks after the family's lists.</p>
-  </header>
-
-  <section class="stage">
-    <div style="min-width:0">
-      <div class="device" id="device"><div class="bezel" id="bezel"><div class="screen" id="screen">
-        <div id="facebox" aria-label="homebot's face"><canvas id="face" width="800" height="480"></canvas></div>
-        <button class="listbtn" id="listbtn" aria-label="Open lists">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6H20M9.5 12H20M9.5 18H20"/><path d="M3.5 6l1.4 1.4L7 5.2M3.5 12l1.4 1.4L7 11.2M3.8 18h2.6"/></svg>
-        </button>
-        <div class="caption" id="caption"></div>
-        <div id="ui"></div>
-        <div class="mic" id="mic"><span class="dot"></span><span id="heard"></span></div>
-      </div></div></div>
-      <p class="note">800 × 480 touch screen, scaled to fit. Sample household data. Tap his face in the corner to go back to him.</p>
-    </div>
-
-    <aside class="console">
-      <div class="panel talkpanel">
-        <div class="talkbar">
-          <button class="talk" id="talk" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect class="dotp" x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span id="talklabel">Tap to talk</span></button>
-          <select class="langsel" id="lang" aria-label="Language you speak"><option value="en">English</option><option value="hi">हिंदी</option><option value="mr">मराठी</option></select>
+<div id="stage"><div class="inner">
+  <div class="screen" id="screen">
+    <div id="facebox" aria-label="homebot's face"><canvas id="face" width="800" height="480"></canvas></div>
+    <button class="listbtn" id="listbtn" aria-label="Open lists">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6H20M9.5 12H20M9.5 18H20"/><path d="M3.5 6l1.4 1.4L7 5.2M3.5 12l1.4 1.4L7 11.2M3.8 18h2.6"/></svg>
+    </button>
+    <div class="caption" id="caption"></div>
+    <div id="ui"></div>
+    <div class="mic" id="mic"><span class="dot"></span><span id="heard"></span></div>
+    <button class="dctl" id="gear" type="button" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+    <button class="dctl" id="micbtn" type="button" aria-label="Talk to homebot">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+    </button>
+    <div class="settings" id="settings" hidden>
+      <div class="sbox" role="dialog" aria-modal="true" aria-labelledby="stitle">
+        <div class="shead"><h2 id="stitle">Settings</h2>
+          <button class="ib" id="sclose" type="button" aria-label="Close settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+        <div class="scols">
+          <section>
+            <h3>Brain key</h3>
+            <p class="hint">A free Gemini key from aistudio.google.com. It is saved only on this phone.</p>
+            <form class="krow" id="keyform"><input class="field" id="key" type="password" autocomplete="off" placeholder="Paste your key" aria-label="Gemini API key"><button class="btn primary">Save</button></form>
+            <div class="srow"><span class="keystate" id="keystate"></span><button class="btn quiet" id="forget" type="button">Forget</button></div>
+          </section>
+          <section>
+            <h3>Emotion model</h3>
+            <p class="hint">Reads feelings in everyday English. About 120 MB, kept on this phone. Best on Wi-Fi.</p>
+            <div class="mtrack" aria-hidden="true"><i id="mbar"></i></div>
+            <div class="srow"><span class="keystate" id="mstate">Not downloaded.</span>
+              <span style="display:flex;gap:6px"><button class="btn primary" id="mload" type="button">Download</button><button class="btn quiet" id="mforget" type="button" hidden>Remove</button></span></div>
+          </section>
         </div>
-        <label class="toggle"><input type="checkbox" id="speakon" checked> Speak replies out loud</label>
-        <p class="hint">Or type what you would say:</p>
-        <form class="say" id="sayform"><input id="say" autocomplete="off" placeholder="ugh, I'm so tired, add tea to groceries" aria-label="Voice command"><button>Say</button></form>
-        <div class="chips" id="chips"></div>
       </div>
-      <div class="panel">
-        <h3>Brain</h3>
-        <p class="hint">Uses Google's free Gemini. Get a free key at aistudio.google.com (Get API key) and paste it here. It is saved only on this phone and is never part of the website.</p>
-        <form class="say" id="keyform"><input id="key" type="password" autocomplete="off" placeholder="Paste your Gemini API key" aria-label="Gemini API key"><button>Save</button></form>
-        <div style="display:flex;align-items:center;gap:8px;justify-content:space-between"><p class="keystate" id="keystate"></p><button class="chip" id="forget" type="button">Forget key</button></div>
-      </div>
-      <div class="panel" id="mpanel">
-        <h3>Emotion model</h3>
-        <p class="hint">Helps his face read everyday English he has no rule for, like "my heart sank". About 120 MB, downloaded once from this site and kept on the phone. Best on Wi-Fi.</p>
-        <div class="mtrack" aria-hidden="true"><i id="mbar"></i></div>
-        <div class="mrow"><span class="keystate" id="mstate">Not downloaded.</span>
-          <span style="display:flex;gap:6px"><button class="mbtn" id="mload" type="button">Download</button><button class="chip" id="mforget" type="button" hidden>Remove</button></span></div>
-      </div>
-      <div class="panel">
-        <h3>Conversation</h3>
-        <div class="log" id="log" aria-live="polite"></div>
-      </div>
-      <div class="panel">
-        <h3>Play with the face</h3>
-        <p class="hint">Tap his face on the home screen. Or type <b>/happy</b>, <b>/angry *1.4</b>, <b>/bored happy 0.3</b>, <b>!realisation</b>, <b>&gt;hello there</b>, <b>+lean 0.8</b>.</p>
-        <div class="chips" id="pchips"></div>
-      </div>
-      <div class="panel" style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="chip" id="cyc">Next expression</button>
-        <button class="chip" id="reset">Reset sample lists</button>
-      </div>
-    </aside>
-  </section>
-
-  <section class="notes">
-    <div class="panel">
-      <h3>How it works</h3>
-      <ul>
-        <li>The list button opens straight into your lists. His face moves into the top-right corner and stays live there; tap it to go back to him.</li>
-        <li>Inside a list: back and the list name on the left; edit, remove and play beside his face on the right.</li>
-        <li>Play walks the list one item at a time, read aloud. Answer done, skip or back.</li>
-        <li>Ticked items move under <i>Done</i>, so a daily checklist can be reused with <i>Untick all</i>.</li>
-        <li>Removing a list always asks first.</li>
-      </ul>
     </div>
-    <div class="panel">
-      <h3>What you can say</h3>
-      <div class="tbl"><table>
-        <tr><td>open groceries</td><td>show a list</td></tr>
-        <tr><td>show my lists</td><td>all lists</td></tr>
-        <tr><td>new list packing</td><td>create one</td></tr>
-        <tr><td>add eggs to groceries</td><td>add items</td></tr>
-        <tr><td>mark milk done · untick milk</td><td>tick or untick</td></tr>
-        <tr><td>change atta to 10 kg atta</td><td>edit an item</td></tr>
-        <tr><td>remove eggs</td><td>delete an item</td></tr>
-        <tr><td>rename groceries to sabzi</td><td>rename</td></tr>
-        <tr><td>what's on groceries</td><td>read it out</td></tr>
-        <tr><td>play morning checklist</td><td>step through</td></tr>
-        <tr><td>done · skip · back</td><td>while playing</td></tr>
-        <tr><td>delete list packing</td><td>asks first</td></tr>
-        <tr><td>close</td><td>back to the face</td></tr>
-      </table></div>
-    </div>
-    <div class="panel">
-      <h3>Same character, same logic</h3>
-      <ul>
-        <li>The face is the approved build's code, unchanged: palette, geometry, expressions, lip sync.</li>
-        <li>Every line you say goes through the same sentence reader as the app: expression, then low / mid / intense, and paragraphs play as beats.</li>
-        <li>List events add small reactions on top: a low <i>happy</i> on a tick, <i>delight</i> when a list is finished.</li>
-        <li>Planned in code: <code>lists</code> and <code>list_items</code> tables in <code>store.py</code>, and brain tools <code>create_list</code>, <code>add_list_item</code>, <code>set_item_done</code>, <code>show_list</code>, <code>play_list</code>.</li>
-      </ul>
-    </div>
-  </section>
-</div>
+  </div>
+</div></div>
+<div id="rotate" role="alert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M3 9a9 9 0 0 1 4-5M21 15a9 9 0 0 1-4 5"/></svg>Turn your phone sideways to talk to homebot</div>
 <!--FACE_AND_READER-->
 <script>
 (function(){
 "use strict";
-const device=document.getElementById("device"), bezel=document.getElementById("bezel");
-const fit=()=>{ bezel.style.transform="scale("+Math.min(1,device.clientWidth/820)+")"; };
-new ResizeObserver(fit).observe(device); fit();
+// Fit any phone held sideways: keep 480 px of height, widen the screen to the
+// phone's own shape, then scale it to fill the space inside the safe areas.
+const stageEl=document.querySelector("#stage .inner"), screenEl=document.getElementById("screen");
+function fit(){
+  const w=stageEl.clientWidth, h=stageEl.clientHeight; if(!w||!h) return;
+  const W=Math.max(800,Math.round(480*w/h)), k=Math.min(w/W,h/480);
+  screenEl.style.width=W+"px"; screenEl.style.setProperty("--sw",W+"px");
+  screenEl.style.transform="translate(-50%,-50%) scale("+k+")";
+}
+new ResizeObserver(fit).observe(stageEl); addEventListener("orientationchange",()=>setTimeout(fit,250)); fit();
 
 /* ---------- data ---------- */
 const SAMPLE=()=>({lists:[
@@ -315,36 +240,105 @@ function feel(text){
   else if(typeof mAsk==="function") mAsk(text);   // the reader found nothing: ask the emotion model
   return real;
 }
-/* ---------- speaking: the phone's own voice, mouth in step ---------- */
+/* ---------- speaking: Gemini's own voice, the phone's best voice as fallback ----------
+   Replies arrive sentence by sentence. Each sentence's audio is fetched as soon
+   as it exists and played in order, so he starts talking before the whole answer
+   is written. If Gemini's voice is slow (over 6 s), busy, or out of quota, that
+   sentence uses the best voice installed on the phone instead. */
 const store={get:(k,d)=>{try{const v=localStorage.getItem(k);return v==null?d:v;}catch(e){return d;}},set:(k,v)=>{try{localStorage.setItem(k,v);}catch(e){}},del:k=>{try{localStorage.removeItem(k);}catch(e){}}};
-const LANGS={en:"en-IN",hi:"hi-IN",mr:"mr-IN"};
-let lang=store.get("hb-lang","en"), speakOn=store.get("hb-speak","1")==="1";
+const getKey=()=>store.get("hb-gemini-key","");
 const canSpeak="speechSynthesis" in window;
 let voices=[]; const loadVoices=()=>{ try{ voices=speechSynthesis.getVoices(); }catch(e){} };
 if(canSpeak){ loadVoices(); try{ speechSynthesis.onvoiceschanged=loadVoices; }catch(e){} }
-const isDeva=t=>/[\u0900-\u097f]/.test(t);
-function pickVoice(code){ return voices.find(v=>v.lang===code)||voices.find(v=>v.lang.replace("_","-")===code)||voices.find(v=>v.lang.slice(0,2)===code.slice(0,2))||null; }
-function voiceOut(text){
-  // The mouth starts when the voice starts, so lip sync and sound begin together.
-  let started=false;
-  const face=()=>{ if(!started){ started=true; try{ F.speak(text); }catch(e){} } };
-  if(!speakOn||!canSpeak){ face(); return; }
-  try{
-    speechSynthesis.cancel();
-    const code=isDeva(text)?(lang==="mr"?"mr-IN":"hi-IN"):"en-IN";
-    const u=new SpeechSynthesisUtterance(text); u.lang=code; const v=pickVoice(code); if(v) u.voice=v;
-    u.onstart=face; u.onend=()=>{ try{ F.hush(); }catch(e){} }; u.onerror=face;
-    speechSynthesis.speak(u);
-    setTimeout(face,1200);   // some phones never fire onstart; never leave him silent-faced
-  }catch(e){ face(); }
+const isDeva=t=>/[ऀ-ॿ]/.test(t);
+const log=()=>{};   // the display has no log; kept so older calls stay harmless
+
+let AC=null;
+function audioCtx(){ if(!AC){ const C=window.AudioContext||window.webkitAudioContext; if(C) AC=new C(); } if(AC&&AC.state==="suspended") AC.resume(); return AC; }
+
+// The phone's best voice: enhanced / premium / neural / Google voices first,
+// novelty voices never. Pitch and pace tuned for a small, friendly robot.
+function bestVoice(code){
+  const base=code.slice(0,2), cand=voices.filter(v=>v.lang.replace("_","-").toLowerCase().startsWith(base));
+  const score=v=>{ const n=v.name.toLowerCase(); let s=0;
+    if(v.lang.replace("_","-")===code) s+=4;
+    if(/enhanced|premium|neural|natural|wavenet|studio/.test(n)) s+=6;
+    if(/google/.test(n)) s+=3;
+    if(/compact|eloquence|novelty|whisper|zarvox|jester|organ|bubbles|boing|cellos|trinoids|superstar|wobble|albert|fred|junior|ralph|kathy|bells|bad news|good news|hysterical|deranged|pipe/.test(n)) s-=20;
+    return s; };
+  return cand.sort((a,b)=>score(b)-score(a))[0]||null;
 }
-function shush(){ try{ if(canSpeak) speechSynthesis.cancel(); F.hush(); }catch(e){} }
-function say(text){ $("#caption").textContent=text; voiceOut(text); log("bot",text); }
-function log(who,text,extra){
-  const d=document.createElement("div");
-  d.innerHTML=`<b>${who==="bot"?"bot":"you"}</b><span>${esc(text)}</span>`+(extra?`<span class="f">${esc(extra)}</span>`:"");
-  const l=$("#log"); l.appendChild(d); l.scrollTop=l.scrollHeight;
+function phoneSay(text,done){
+  if(!canSpeak){ F.speak(text); setTimeout(done,320*text.split(/\s+/).length+400); return; }
+  const code=isDeva(text)?"hi-IN":"en-IN", u=new SpeechSynthesisUtterance(text);
+  u.lang=code; const v=bestVoice(code); if(v) u.voice=v; u.pitch=1.15; u.rate=1.03;
+  let started=false; const face=()=>{ if(!started){ started=true; F.speak(text); } };
+  u.onstart=face; u.onend=done; u.onerror=done;
+  speechSynthesis.speak(u); setTimeout(face,1200);
 }
+
+// Gemini speech: one fixed voice, so homebot always sounds like himself. The
+// sentence goes in exactly as written. Tested: these speech models read any
+// style instruction aloud ("Say cheerfully. ...") and refuse a separate system
+// instruction, so tone comes from the words themselves and the face shows feeling.
+const TTS_MODELS=["gemini-3.8-flash-tts","gemini-3.8-flash-lite-tts"];
+const TTS_VOICE="Puck";
+let ttsPausedUntil=0;
+async function geminiAudio(text,signal){
+  const key=getKey(); if(!key||Date.now()<ttsPausedUntil) return null;
+  for(const m of TTS_MODELS){
+    try{
+      const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+m+":generateContent",{method:"POST",signal,
+        headers:{"Content-Type":"application/json","x-goog-api-key":key},
+        body:JSON.stringify({contents:[{parts:[{text}]}],
+          generationConfig:{responseModalities:["AUDIO"],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:TTS_VOICE}}}}})});
+      if(r.status===429){ ttsPausedUntil=Date.now()+10*60*1000; return null; }   // out of quota: phone voice for 10 min
+      if(!r.ok) continue;
+      const j=await r.json(), p=(((j.candidates||[])[0]||{}).content||{parts:[]}).parts.find(x=>x.inlineData);
+      if(p) return p.inlineData;
+    }catch(e){ if(e.name==="AbortError") return null; }
+  }
+  return null;
+}
+async function decodeAudio(d){
+  const ac=audioCtx(); if(!ac) return null;
+  const bin=atob(d.data), bytes=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  const m=/rate=(\d+)/.exec(d.mimeType||"");
+  if(/L16|pcm/i.test(d.mimeType||"")){   // raw 16-bit PCM
+    const rate=m?+m[1]:24000, n=bytes.length>>1, dv=new DataView(bytes.buffer), buf=ac.createBuffer(1,n,rate), ch=buf.getChannelData(0);
+    for(let i=0;i<n;i++) ch[i]=dv.getInt16(i*2,true)/32768; return buf;
+  }
+  return await ac.decodeAudioData(bytes.buffer);
+}
+const speech={q:[],playing:false,gen:0,src:null};
+function splitSentences(t){
+  const parts=String(t).replace(/\s+/g," ").trim().split(/(?<=[.!?।])\s+/), out=[];
+  for(const p of parts){ if(out.length&&out[out.length-1].length<14) out[out.length-1]+=" "+p; else if(p) out.push(p); }
+  return out;
+}
+function speakQueue(sentence){
+  const gen=speech.gen, job={text:sentence};
+  job.ready=(async()=>{ const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),6000);
+    const a=await geminiAudio(sentence,ctl.signal); clearTimeout(t);
+    if(!a||gen!==speech.gen) return null; try{ return await decodeAudio(a); }catch(e){ return null; } })();
+  speech.q.push(job); if(!speech.playing) playNext(gen);
+}
+async function playNext(gen){
+  if(gen!==speech.gen) return;
+  const job=speech.q.shift();
+  if(!job){ speech.playing=false; try{ F.hush(); }catch(e){} return; }
+  speech.playing=true;
+  const buf=await job.ready; if(gen!==speech.gen) return;
+  $("#caption").textContent=job.text;
+  const next=()=>{ if(gen===speech.gen) playNext(gen); };
+  if(buf){ const ac=audioCtx(), src=ac.createBufferSource(); src.buffer=buf; src.connect(ac.destination);
+    speech.src=src; src.onended=next; F.speak(job.text); src.start(); }
+  else phoneSay(job.text,next);
+}
+function shush(){ speech.gen++; speech.q=[]; speech.playing=false;
+  try{ if(speech.src) speech.src.stop(); }catch(e){} speech.src=null;
+  try{ if(canSpeak) speechSynthesis.cancel(); }catch(e){} try{ F.hush(); }catch(e){} }
+function say(text){ shush(); for(const s of splitSentences(text)) speakQueue(s); }
 
 /* ---------- icons (bold, single stroke family) ---------- */
 const I={
@@ -502,89 +496,144 @@ function playground(text){
     else log("bot","Expressions: "+F.names().join(", ")); return true; }
   return false;
 }
-/* ---------- brain: Gemini free tier, key kept on this phone only ---------- */
-// Tried in order. Google retires models for new keys (gemini-2.5-flash already
-// refuses new users) and the newest ones are often "busy" at peak times, so a
-// busy or retired model just hands the question to the next one.
-// Ordered by what worked in testing: gemini-3.5-flash answered with low thinking
-// and a 600-token allowance; the others are tried in turn if it is busy.
-const GEMINI_MODELS=["gemini-3.5-flash","gemini-3.8-flash","gemini-flash-latest","gemini-3.1-flash-lite"];
-const getKey=()=>store.get("hb-gemini-key","");
+/* ---------- brain: Gemini free tier, streamed, fast fallback ----------
+   gemini-3.5-flash-lite answered in ~2 s with no thinking; it goes first. Every
+   model gets 8 s to start answering; a model that reports its quota used up is
+   skipped for 15 minutes. The reply is streamed and spoken sentence by sentence. */
+const GEMINI_MODELS=[
+  {id:"gemini-3.5-flash-lite", cfg:{maxOutputTokens:300,temperature:0.7}},
+  {id:"gemini-3.5-flash",      cfg:{maxOutputTokens:600,temperature:0.7,thinkingConfig:{thinkingLevel:"low"}}},
+  {id:"gemini-flash-latest",   cfg:{maxOutputTokens:600,temperature:0.7}},
+  {id:"gemini-3.1-flash-lite", cfg:{maxOutputTokens:300,temperature:0.7}}];
+const skipUntil={};
 let convo=[];
 function persona(){
   const lists=data.lists.map(l=>l.title+": "+(left(l).map(i=>i.text).join(", ")||"(all done)")).join("\n");
   return "You are homebot, the warm home assistant of an Indian family who speak Marathi, Hindi and English. "+
     "You live on a small screen with an expressive face, and everything you write is spoken aloud. "+
-    "Reply in one or two short sentences. No markdown, no lists, no emoji, no symbols. "+
+    "Reply in one to three short sentences. No markdown, no lists, no emoji, no symbols. "+
     "Answer in the same language and script the person used; if they mix Hindi or Marathi with English, mix the same way. "+
     "Be kind and practical. To change a list, tell them the exact words to say, for example: add eggs to groceries. "+
     "Today is "+new Date().toDateString()+".\nThe family's lists right now:\n"+lists;
 }
-async function askBrain(text){
+const clean=t=>t.replace(/[*_#`>]/g,"");
+async function streamBrain(text,onSentence){
   const key=getKey(); if(!key) return null;
   convo.push({role:"user",parts:[{text}]}); convo=convo.slice(-10);
-  const body=JSON.stringify({systemInstruction:{parts:[{text:persona()}]},contents:convo,generationConfig:{maxOutputTokens:600,temperature:0.7,thinkingConfig:{thinkingLevel:'low'}}});
   let busy=false;
-  for(const model of GEMINI_MODELS){
-    const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),45000);   // thinking takes ~20 s on a busy day
+  for(const {id,cfg} of GEMINI_MODELS){
+    if((skipUntil[id]||0)>Date.now()) continue;
+    const ctl=new AbortController(); let tm=setTimeout(()=>ctl.abort(),8000);   // 8 s to start answering
     let r;
     try{
-      r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent",{
-        method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","x-goog-api-key":key},body});
-    }catch(e){ clearTimeout(tm); convo.pop(); return {err:navigator.onLine===false?"I'm offline right now.":"I couldn't reach my brain. Check the internet and try again."}; }
+      r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+id+":streamGenerateContent?alt=sse",{
+        method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","x-goog-api-key":key},
+        body:JSON.stringify({systemInstruction:{parts:[{text:persona()}]},contents:convo,generationConfig:cfg})});
+    }catch(e){ clearTimeout(tm); if(navigator.onLine===false){ convo.pop(); return {err:"I'm offline right now."}; } busy=true; continue; }
+    if(r.status===429){ clearTimeout(tm); skipUntil[id]=Date.now()+15*60*1000; busy=true; continue; }
+    if(r.status===404||r.status>=500){ clearTimeout(tm); busy=true; continue; }
+    if(!r.ok){ clearTimeout(tm); convo.pop();
+      return {err:(r.status===400||r.status===401||r.status===403)?"That Gemini key didn't work. Check it in settings.":"My brain had a problem. Please try again."}; }
+    let full="", pending="", buf="";
+    try{
+      const rd=r.body.getReader(), dec=new TextDecoder();
+      for(;;){
+        const {done,value}=await rd.read(); if(done) break;
+        clearTimeout(tm); tm=setTimeout(()=>ctl.abort(),30000);
+        buf+=dec.decode(value,{stream:true});
+        let i;
+        while((i=buf.indexOf("\n"))>=0){
+          const line=buf.slice(0,i).trim(); buf=buf.slice(i+1);
+          if(!line.startsWith("data:")) continue;
+          let d; try{ d=JSON.parse(line.slice(5)); }catch(e){ continue; }
+          const t=((((d.candidates||[])[0]||{}).content||{}).parts||[]).filter(p=>!p.thought).map(p=>p.text||"").join("");
+          if(!t) continue;
+          full+=t; pending+=clean(t);
+          let m;
+          while((m=/^([\s\S]*?[.!?।])\s+/.exec(pending))&&m[1].trim().length>1){ onSentence(m[1].trim()); pending=pending.slice(m[0].length); }
+        }
+      }
+    }catch(e){ clearTimeout(tm); if(!full){ busy=true; continue; } }
     clearTimeout(tm);
-    if(r.status===404||r.status===429||r.status>=500){ if(r.status!==404) busy=true; continue; }   // retired, rate-limited or busy: next model
-    if(!r.ok){ convo.pop(); return {err:(r.status===400||r.status===401||r.status===403)?"That Gemini key didn't work. Check it in the Brain box.":"My brain had a problem. Please try again."}; }
-    const j=await r.json();
-    const out=((j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts)||[]).map(p=>p.text||"").join("").replace(/[*_#`>]/g,"").trim();
-    if(!out){ convo.pop(); return {err:"I couldn't think of an answer to that."}; }
-    convo.push({role:"model",parts:[{text:out}]});
-    return {text:out};
+    if(!full.trim()){ busy=true; continue; }
+    if(pending.trim()) onSentence(pending.trim());
+    convo.push({role:"model",parts:[{text:clean(full).trim()}]});
+    return {text:full};
   }
   convo.pop();
   return {err:busy?"Google's AI is very busy right now. Ask me again in a minute.":"I couldn't find a working AI model. Please try again later."};
 }
 async function think(text,real){
-  if(!getKey()){ say(real.length?"I hear you. Add your free Gemini key in the Brain box and I can answer anything.":"Add your free Gemini key in the Brain box and I can answer anything. For lists, try: open groceries."); return; }
-  setTimeout(()=>{ if(!$("#caption").dataset.busy) return; F.flash("thinking",8); }, real.length?900:0);
-  $("#caption").dataset.busy="1";
-  const res=await askBrain(text);
-  delete $("#caption").dataset.busy;
-  if(!res) return;
-  if(res.err){ F.flash("apologetic",2.2); say(res.err); return; }
-  // His answer gets its own face, through the same reader.
-  let rb=[]; try{ rb=(R.readBeats(res.text)||[]).filter(b=>b[0]!=="attentive"); }catch(e){}
-  if(rb.length) F.playSteps(rb.map(b=>[b[0],b[4]||1.2,b[2]])); else F.flash("answering",3);
-  say(res.text);
+  if(!getKey()){ say("Add your free Gemini key in settings, the little gear, and I can answer anything."); return; }
+  let answered=false;
+  const thinkT=setTimeout(()=>{ if(!answered) F.flash("thinking",30); }, real.length?900:0);
+  const res=await streamBrain(text,s=>{
+    if(!answered){ answered=true; clearTimeout(thinkT);
+      // his answer gets its own face, through the same reader
+      let rb=[]; try{ rb=(R.readBeats(s)||[]).filter(b=>b[0]!=="attentive"); }catch(e){}
+      if(rb.length) F.playSteps(rb.map(b=>[b[0],b[4]||1.2,b[2]])); else F.flash("answering",3); }
+    speakQueue(s);
+  });
+  clearTimeout(thinkT);
+  if(res&&res.err){ F.flash("apologetic",2.2); say(res.err); }
 }
 function showKey(){ const k=getKey(), el=$("#keystate");
-  if(k){ el.textContent="Key saved on this phone (…"+k.slice(-4)+")."; el.className="keystate ok"; }
-  else { el.textContent="No key yet: lists and feelings work, open questions need the key."; el.className="keystate"; } }
+  if(k){ el.textContent="Saved on this phone (…"+k.slice(-4)+")."; el.className="keystate ok"; }
+  else { el.textContent="No key yet."; el.className="keystate"; } }
 
-/* ---------- listening: tap to talk ---------- */
+/* ---------- listening: hears the whole thing ----------
+   continuous=false made the phone stop at the first short pause, so he answered
+   half a thought. Now he keeps listening and decides the turn is over only after
+   2 s of silence, or when the mic is tapped again. If the phone's engine stops by
+   itself (iPhone does), it is restarted until the turn really ends. */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-let rec=null, listening=false;
-function talkUI(on){ listening=on; $("#talk").classList.toggle("on",on); $("#talklabel").textContent=on?"Listening… tap to stop":"Tap to talk"; }
+const SILENCE_MS=2000, NOTHING_MS=7000;
+let rec=null, listening=false, finalText="", interimText="", silenceT=null, endTurn=false;
+function recLang(){ const n=(navigator.language||"en-IN").toLowerCase(); return n.startsWith("hi")?"hi-IN":n.startsWith("mr")?"mr-IN":"en-IN"; }
+function talkUI(on){ listening=on; $("#micbtn").classList.toggle("on",on); $("#micbtn").setAttribute("aria-label",on?"Done talking":"Talk to homebot");
+  $("#mic").classList.toggle("on",on); $("#screen").classList.toggle("listening",on); }
+function armSilence(ms){ clearTimeout(silenceT); silenceT=setTimeout(finishTurn,ms); }
+function finishTurn(){ clearTimeout(silenceT); endTurn=true; try{ rec&&rec.stop(); }catch(e){} }
+function goFull(){ try{ const d=document.documentElement; if(!document.fullscreenElement&&d.requestFullscreen) d.requestFullscreen().then(()=>{ try{ screen.orientation.lock("landscape").catch(()=>{}); }catch(e){} }).catch(()=>{}); }catch(e){} }
 function talk(){
+  audioCtx(); goFull();
+  if(listening){ finishTurn(); return; }
   shush();
-  if(!SR){ say("This browser can't listen. Use Chrome on Android or Safari on iPhone, or type below."); return; }
-  if(listening&&rec){ try{ rec.stop(); }catch(e){} return; }
-  let finalText="", interim="";
-  rec=new SR(); rec.lang=LANGS[lang]||"en-IN"; rec.interimResults=true; rec.maxAlternatives=1; rec.continuous=false;
-  rec.onstart=()=>{ talkUI(true); $("#heard").textContent="Listening…"; $("#mic").classList.add("on"); F.flash("listening",30); };
-  rec.onresult=e=>{ interim=""; for(let i=e.resultIndex;i<e.results.length;i++){ const x=e.results[i]; if(x.isFinal) finalText+=x[0].transcript; else interim+=x[0].transcript; }
-    $("#heard").textContent="“"+(finalText+interim).trim()+"”"; };
-  rec.onerror=e=>{ const m={"not-allowed":"The microphone is blocked. Allow it for this site in your browser settings, then tap Talk again.",
-      "service-not-allowed":"The microphone is blocked. Allow it for this site in your browser settings, then tap Talk again.",
-      "no-speech":"I didn't hear anything. Tap Talk and try again.","audio-capture":"I can't find a microphone.",
-      "network":"Listening needs an internet connection."}[e.error]; if(m) say(m); };
-  rec.onend=()=>{ talkUI(false); $("#mic").classList.remove("on"); const t=(finalText||interim).trim(); if(t) hear(t); else F.flash("rest",.3); };
-  try{ rec.start(); }catch(e){ talkUI(false); say("I couldn't start listening. Tap Talk again."); }
+  if(!SR){ say("This browser can't listen. Use Chrome on Android or Safari on iPhone."); return; }
+  finalText=""; interimText=""; endTurn=false; $("#heard").textContent="Listening…"; startRec(true);
 }
-$("#talk").onclick=talk;
-$("#lang").value=lang; $("#lang").onchange=e=>{ lang=e.target.value; store.set("hb-lang",lang); };
-$("#speakon").checked=speakOn; $("#speakon").onchange=e=>{ speakOn=e.target.checked; store.set("hb-speak",speakOn?"1":"0"); if(!speakOn) shush(); };
-$("#keyform").onsubmit=e=>{ e.preventDefault(); const v=$("#key").value.trim(); if(v){ store.set("hb-gemini-key",v); $("#key").value=""; convo=[]; showKey(); say("Thanks. My brain is connected."); } };
+function startRec(first){
+  rec=new SR(); rec.lang=recLang(); rec.continuous=true; rec.interimResults=true; rec.maxAlternatives=1;
+  rec.onstart=()=>{ if(first){ talkUI(true); F.flash("listening",120); } armSilence(finalText||interimText?SILENCE_MS:NOTHING_MS); };
+  rec.onresult=e=>{
+    interimText="";
+    for(let i=e.resultIndex;i<e.results.length;i++){ const x=e.results[i];
+      if(x.isFinal) finalText=(finalText+" "+x[0].transcript).trim(); else interimText+=x[0].transcript; }
+    $("#heard").textContent="“"+(finalText+" "+interimText).trim()+"”";
+    armSilence(SILENCE_MS);
+  };
+  rec.onerror=e=>{
+    const m={"not-allowed":"The microphone is blocked. Allow it for this site in your browser settings, then tap the mic again.",
+      "service-not-allowed":"The microphone is blocked. Allow it for this site in your browser settings, then tap the mic again.",
+      "audio-capture":"I can't find a microphone.","network":"Listening needs an internet connection."}[e.error];
+    if(m){ endTurn=true; clearTimeout(silenceT); talkUI(false); say(m); }
+  };
+  rec.onend=()=>{
+    if(!endTurn){ try{ startRec(false); return; }catch(e){} }   // stopped on its own: keep listening
+    clearTimeout(silenceT); talkUI(false);
+    const t=(finalText+" "+interimText).trim(); finalText=""; interimText="";
+    if(t) hear(t); else { $("#heard").textContent=""; F.flash("rest",.3); }
+  };
+  try{ rec.start(); }catch(e){ talkUI(false); say("I couldn't start listening. Tap the mic again."); }
+}
+
+/* ---------- display controls ---------- */
+$("#micbtn").onclick=talk;
+const openSettings=()=>{ $("#settings").hidden=false; showKey(); };
+const closeSettings=()=>{ $("#settings").hidden=true; };
+$("#gear").onclick=openSettings; $("#sclose").onclick=closeSettings;
+$("#settings").addEventListener("click",e=>{ if(e.target.id==="settings") closeSettings(); });
+$("#keyform").onsubmit=e=>{ e.preventDefault(); const v=$("#key").value.trim(); if(v){ store.set("hb-gemini-key",v); $("#key").value=""; convo=[]; ttsPausedUntil=0; for(const k in skipUntil) delete skipUntil[k]; showKey(); audioCtx(); closeSettings(); say("Thanks. My brain is connected."); } };
 $("#forget").onclick=()=>{ store.del("hb-gemini-key"); convo=[]; showKey(); };
 showKey();
 
@@ -627,28 +676,16 @@ $("#mforget").onclick=()=>{ if(mw) mw.postMessage({type:"forget"}); };
 // Already downloaded once? Load it straight from the phone, no question asked.
 (async()=>{ try{ const c=await caches.open("hb-emotion-v1"); if((await c.keys()).length>=2) mStart(); }catch(e){} })();
 
-let demo=-1;
-function cycle(){ const n=F.names(); demo=(demo+1)%n.length; if(ui.view!=="home") go("home"); F.setX(n[demo]); $("#caption").textContent=`${n[demo]}  (${demo+1}/${n.length})`; }
 function hear(text){
   shush();
   if(playground(text)) return;
-  $("#heard").textContent="“"+text+"”"; $("#mic").classList.add("on");
+  $("#heard").textContent="“"+text+"”";
   const real=feel(text);   // the sentence reader goes first, exactly like the app
-  log("you",text,real.length?"face: "+real.map(b=>b[0]+" · "+b[1]).join(" → "):"");
-  setTimeout(()=>{ $("#mic").classList.remove("on"); const r=command(text);
-    if(r===undefined) think(text,real);   // not a list command: ask the brain
-    else if(r) say(r); },650);
+  const r=command(text);
+  if(r===undefined) think(text,real);   // not a list command: ask the brain
+  else if(r) say(r);
 }
-$("#sayform").onsubmit=e=>{ e.preventDefault(); const v=$("#say").value.trim(); if(v){ hear(v); $("#say").value=""; } };
-const CHIPS=["open morning checklist","play morning checklist","done","skip","ugh, I'm so tired, add tea to groceries","yay! mark milk done","add coriander and green chillies to groceries","what's on diwali prep","change atta to 10 kg atta","new list packing for Goa","delete list packing for goa","yes","show my lists","close"];
-$("#chips").innerHTML=CHIPS.map(c=>`<button class="chip" type="button">${esc(c)}</button>`).join("");
-$("#chips").onclick=e=>{ const b=e.target.closest(".chip"); if(b) hear(b.textContent); };
-const PCH=["/happy *0.4","/happy *1.4","/tender","/stern","/bored happy 0.3","!realisation","!double_take","!slow_burn",">I have 25 books, call me at 7:30","+fatigue 0.7","+fatigue 0","/rest"];
-$("#pchips").innerHTML=PCH.map(c=>`<button class="chip" type="button">${esc(c)}</button>`).join("");
-$("#pchips").onclick=e=>{ const b=e.target.closest(".chip"); if(b) hear(b.textContent); };
-$("#cyc").onclick=cycle;
-$("#reset").onclick=()=>{ data=SAMPLE(); ui.cur=null; ui.confirm=null; go("home"); $("#log").innerHTML=""; say("Sample lists are back."); };
 render();
-setTimeout(()=>{ $("#caption").textContent="Tap Talk and say hello."; },600);   // phones block sound until the first tap
+$("#caption").textContent="Tap the mic and say hello.";   // phones block sound until the first tap
 })();
 </script>
