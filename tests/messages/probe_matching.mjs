@@ -14,4 +14,5 @@ const pairs = [["Aaji","Shobha"],["आजी","Shobha"],["आजी","शोभ�
 // FIXER NOTE: leave_message may now refuse (ambiguous_recipient) and save nothing; report that as ASK instead of crashing.
 for (const [to, who] of pairs) { B.msgs.list.length = 0; const lm = B.runTool("leave_message", { from: "x", to, message: "m" });
   if (!lm.ok) { console.log(`ASK   to="${to}" (${lm.error}${lm.candidates ? ": " + lm.candidates.map(c => c.name).join("/") : ""})  asked by "${who}"`); continue; }
+  B.runTool("set_speaker", { name: who }); // FIXER NOTE (round 2): get_messages now only answers the set speaker
   const r = B.runTool("get_messages", { for: who }); console.log((r.messages.length ? "MATCH " : "MISS  ") + `to="${to}" stored="${B.msgs.list[0].to}"  asked by "${who}"`); }

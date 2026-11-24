@@ -107,3 +107,17 @@ Cancel/change (G01–G08 conclusive: paneer replaces bhindi, 7 to 8, 10 to 15 ro
 - `results.json`: merged final results (`run`: pass1/retry, `page_mtime`).
 - `results_pass1.json`: the full first post-rebuild pass.
 - `logs/`: raw logs, plus the discarded pre-rebuild partials.
+
+## Round 2 (fixer)
+### What changed (todo-lists/phone/phone_page.html, rebuilt with ./run.sh phone)
+- **Speaker tracked in code.** New tool `set_speaker(name)` resolves the name through resolvePeople. `get_messages` returns content only when `for` is the current speaker. Otherwise it returns `who_is_speaking_unknown` or `not_the_recipient` and no text. `leave_message.from` is now optional and defaults to the speaker. The speaker resets after 5 min without a turn, when `liveStop` runs, and on every `set_speaker` call. In Live, the speaker persists for the whole session. MSG_RULES now says: ask their name and call set_speaker before get_messages.
+- **Romanised script.** `romanFix`: when the user's message is ASCII with 2 or more ROMAN_DESI words and the reply is at least 50% Devanagari, TODO makes one 7 s non-streaming retry with no tools that asks for a romanised reply. It keeps that retry only if it comes back Latin. Otherwise it keeps the first reply. English speakers are not affected.
+- **Checklist.** `get_messages` returns a `checklist` per message (split on , ; and/aur/ani/आणि/और). The hint and MSG_RULES require every item. `addMissing` appends "Also: …" for missing items, but only for English to English. Devanagari may be Hindi or Marathi, so a word check there would raise false alarms (A16 shape).
+- **Lists in the turn snapshot.** The turn snapshot now holds `{msgs, lists}`. Rollback restores `data.lists`, saves, clears a dangling `ui.cur` and re-renders.
+- tests: C02/C03 now expect an ask with nothing saved or delivered (FIXER NOTE). probe_matching.mjs calls set_speaker before get_messages (FIXER NOTE, harness only).
+
+### Results
+- Offline: probe_matching gives **18 MATCH + 2 ASK** (unchanged). A new offline stub test (scratchpad r2_offline.mjs) **PASSES**: a busy turn after add_items leaves the list unchanged and re-renders. It also **PASSES** the speaker gating checks: no speaker gives an error, the wrong speaker gives an error, and set_speaker("सुनीता") returns the message plus its checklist.
+- Live re-run (A16, B05, B08, C02, C03, C06, E06, F07, G03, H04): **all BUSY.** Gemini free-tier quota was exhausted (429 on all models) from the second turn on. The only conclusive turns were A16 t1 and B08 t1 (leave_message OK). I stopped the run; I did not run I02, K06, H09, K02, the 20-scenario spot check or the stubbed list test, because they would also have come back busy.
+- **Before/after is not measurable yet. Re-run on a fresh quota:** `F07|I02|B05|B08|K06|A16|C02|C03|E06|C06|G03|H04|H09|K02`, then the spot set `A03|A10|A18|B02|C04|C09|D02|E01|E08|F03|F06|G05|H05|I01|I07|J02|L01|M02|N01|O03`.
+- Risk to watch: if the model skips set_speaker, get_messages now refuses. Expect one extra tool round, or a reply asking for the name, in scenarios that state the name in the same turn.

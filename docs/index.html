@@ -2106,20 +2106,31 @@ function speakMessage(m){ const line="Message from "+m.from+" for "+m.to+": "+m.
 
 /* A turn's message changes are held until its reply is really given: a busy or
    failed turn rolls them back, and "delivered" is only set once the words went out. */
-const turn={snap:null,deliver:[]};
-function turnBegin(){ turn.snap=JSON.stringify(msgs); turn.deliver=[]; }
-function turnRollback(){ if(turn.snap!==null){ msgs=JSON.parse(turn.snap); saveMsgs(); updateMsgDot(); } turn.snap=null; turn.deliver=[]; }
+const turn={snap:null,deliver:[],fetched:[]};
+function turnBegin(){ turn.snap=JSON.stringify({msgs,lists:data.lists}); turn.deliver=[]; turn.fetched=[]; }
+function turnRollback(){ if(turn.snap!==null){ const o=JSON.parse(turn.snap); msgs=o.msgs; saveMsgs(); updateMsgDot();
+    if(JSON.stringify(data.lists)!==JSON.stringify(o.lists)){ data.lists=o.lists; save(); try{ if(ui.cur&&!data.lists.some(l=>l.id===ui.cur)) ui.cur=null; render(); }catch(e){} } }   // list changes of a busy turn go too
+  turn.snap=null; turn.deliver=[]; turn.fetched=[]; }
+/* Who is speaking is tracked here, not taken on trust: set by set_speaker, gone after
+   5 minutes without a turn, when a Live session ends, or when set_speaker is called again. */
+const SPEAKER_IDLE_MS=5*60e3;
+const speaker={p:null,raw:"",at:0};
+function speakerTouch(){ if(speaker.at&&Date.now()-speaker.at>SPEAKER_IDLE_MS){ speaker.p=null; speaker.raw=""; } speaker.at=Date.now(); }
+function speakerReset(){ speaker.p=null; speaker.raw=""; speaker.at=0; }
+// short key parts of a message, so a delivery can be checked for dropped details
+const msgChecklist=t=>String(t||"").split(/\s*(?:,|;|،|\band\b|\baur\b|\bani\b|आणि|और|तसेच|\.(?=\s))\s*/i).map(x=>x.trim().replace(/[.।!]+$/,"")).filter(x=>x.length>1);
 function turnCommit(){ const t=Date.now();
   for(const m of msgs.list) if(turn.deliver.includes(m.id)&&!m.delivered_at) m.delivered_at=t;
   turn.snap=null; turn.deliver=[]; saveMsgs(); updateMsgDot(); try{ if(ui.view==="messages") render(); }catch(e){} }
 
 const MSG_TOOLS=[
+  {name:"set_speaker",description:"Call this as soon as the person says who they are (I'm Sunita, मी अंजली, this is the driver), and again whenever someone new says who they are. Messages can only be read to the person set here.",parameters:{type:"OBJECT",properties:{name:{type:"STRING",description:"Their name or role, as they said it"}},required:["name"]}},
   {name:"leave_message",description:"Save a message one person wants passed on to another. Use when someone says tell X, remind X, pass on to X, X should do something, and the like. Only say it is saved if this returns ok.",parameters:{type:"OBJECT",properties:{
-    from:{type:"STRING",description:"The name of the person speaking now, who is leaving it, e.g. Anjali. Never a placeholder: if you don't know, ask first."},
+    from:{type:"STRING",description:"The name of the person speaking now, who is leaving it, e.g. Anjali. Leave it out if set_speaker already knows. Never a placeholder: if you don't know, ask first."},
     to:{type:"STRING",description:"Who it is for, name or role, e.g. Sunita or the cook. Several people may be named: Aarav and Isha. Never a pronoun."},
     message:{type:"STRING",description:"Exactly what should be passed on, every detail, in the sender's own language and words"},
     until:{type:"STRING",description:"When it stops mattering, in the sender's words or as a time: 12:00, 5pm, this morning (until 12:00), afternoon (17:00), evening (21:00), today or tonight (23:59), tomorrow (end of tomorrow). Use this whenever the sender says when."},
-    valid_hours:{type:"NUMBER",description:"Only if no end time was said: how many hours to keep it if not delivered. Default 24."}},required:["from","to","message"]}},
+    valid_hours:{type:"NUMBER",description:"Only if no end time was said: how many hours to keep it if not delivered. Default 24."}},required:["to","message"]}},
   {name:"get_messages",description:"Get messages waiting for the person who is speaking now, plus ones delivered in the last 3 hours (so they can be repeated or translated). Only ever for the speaker, never for someone else even if they offer to pass it on.",parameters:{type:"OBJECT",properties:{for:{type:"STRING",description:"Name or role of the person speaking now, e.g. Sunita or the cook"}},required:["for"]}},
   {name:"mark_delivered",description:"Mark messages as delivered once you say them, in this same reply, to the person they are for.",parameters:{type:"OBJECT",properties:{ids:{type:"ARRAY",items:{type:"NUMBER"}}},required:["ids"]}},
   {name:"delete_message",description:"Cancel a message. Only its sender may cancel or change it (to change: delete, then leave the new one).",parameters:{type:"OBJECT",properties:{id:{type:"NUMBER"},asked_by:{type:"STRING",description:"Name of the person speaking now"}},required:["id"]}},
@@ -2131,8 +2142,15 @@ const knownPeople=()=>people.map(p=>({name:p.name,role:p.role}));
 const PLACEHOLDER_FROM=/^(someone|somebody|unknown|anonymous|family|home|house|ghar|ghar se|घर|घर से|घरून|कोई|कोणी|me|i|मैं|मी)$/i;
 function runMsgTool(name,a){
   a=a||{}; fadeMessages(true);
+  if(name==="set_speaker"){ const nm=String(a.name||"").trim(); speaker.p=null; speaker.raw=""; speaker.at=Date.now();
+    if(!nm||PLACEHOLDER_FROM.test(pnorm(nm))) return {ok:false,error:"missing_name",hint:"Ask the person their name."};
+    const r=resolvePeople(nm);
+    if(r.people.length===1){ speaker.p=r.people[0]; speaker.raw=nm; return {ok:true,speaker:{name:speaker.p.name,role:speaker.p.role}}; }
+    speaker.raw=nm;
+    if(r.people.length>1) return {ok:false,error:"ambiguous_person",candidates:r.people.map(p=>({name:p.name,role:p.role})),hint:"Ask which of them they are, then call set_speaker with the name."};
+    return {ok:true,speaker:{name:nm},known:false,hint:"Not someone I know yet; they may still leave messages. Only messages left for this exact name can be read to them."}; }
   if(name==="leave_message"){
-    const text=String(a.message||"").trim(), from=String(a.from||"").trim();
+    const text=String(a.message||"").trim(), from=String(a.from||"").trim()||(speaker.p?speaker.p.name:speaker.raw);
     const tos=splitRecipients(a.to);
     if(!text||!tos.length) return {ok:false,error:"missing_message_or_recipient",hint:"Ask who it is for and what to say."};
     if(!from||PLACEHOLDER_FROM.test(pnorm(from))) return {ok:false,error:"who_is_speaking_unknown",hint:"Nothing was saved. Ask the person their name, then save it."};
@@ -2154,16 +2172,20 @@ function runMsgTool(name,a){
     return res;
   }
   if(name==="get_messages"){
-    const who=String(a.for||"").trim(); if(!who) return {ok:false,error:"who_is_asking_unknown",hint:"Ask who they are first."};
+    const who=String(a.for||"").trim()||(speaker.p?speaker.p.name:speaker.raw);
+    if(!speaker.p&&!speaker.raw) return {ok:false,error:"who_is_speaking_unknown",hint:"Nothing read out. Ask the person their name, call set_speaker with it, then get_messages."};
     const r=resolvePeople(who);
-    if(r.people.length>1) return {ok:false,error:"ambiguous_person",candidates:r.people.map(p=>({name:p.name,role:p.role})),hint:"Ask the speaker their name."};
+    if(r.people.length>1) return {ok:false,error:"ambiguous_person",candidates:r.people.map(p=>({name:p.name,role:p.role})),hint:"Ask the speaker their name, then call set_speaker."};
     const p=r.people[0];
+    if(speaker.p?(!p||p.id!==speaker.p.id):(p||!samePerson(who,speaker.raw)))
+      return {ok:false,error:"not_the_recipient",speaker:speaker.p?speaker.p.name:speaker.raw,hint:"Messages are only read to the person they are for, and the person speaking is "+(speaker.p?speaker.p.name:speaker.raw)+". If that is wrong, ask their name and call set_speaker."};
     const mine=msgs.list.filter(m=>p?isMsgFor(m,p):samePerson(m.to,who));
     const faded=(msgs.faded||[]).filter(f=>p?(f.to_id?f.to_id===p.id:samePerson(f.to,p.name)):samePerson(f.to,who));
     if(mine.length) showMsgChange();
-    const res={ok:true,for:p?p.name:who,messages:mine.map(msgView)};
+    turn.fetched.push(...mine.filter(m=>!m.delivered_at).map(m=>m.id));
+    const res={ok:true,for:p?p.name:who,messages:mine.map(m=>({...msgView(m),checklist:msgChecklist(m.text)}))};
     if(faded.length) res.faded_earlier=faded.map(f=>({from:f.from,delivered_at:clock(f.delivered_at),faded_at:clock(f.faded_at)}));
-    res.hint=mine.length?"These are only for "+(p?p.name:who)+", the person speaking. Say each one faithfully, every detail, translated fully into the language and script of the person's latest message (English to English). Call mark_delivered with the ids of the ones you say. If they ask again or want another language, repeat it."
+    res.hint=mine.length?"These are only for "+(p?p.name:who)+", the person speaking. Say each one faithfully, every item in its checklist, nothing dropped, translated fully into the language and script of the person's latest message (English to English). Call mark_delivered with the ids of the ones you say. If they ask again or want another language, repeat it."
       :faded.length?"Nothing is waiting now. A message was delivered earlier and has since faded; say that, do not say there was never a message."
       :"There is no message for this person. Say so; never invent one.";
     return res;
@@ -2194,8 +2216,8 @@ const MSG_RULES="You also pass messages between the people of the house, includi
   "When someone asks you to tell, remind or pass something on to another person, call leave_message with who it is from, who it is for and exactly what to say. "+
   "If you don't know who is speaking, ask their name before saving; never invent a sender such as someone or ghar se. If her, him, them, त्यांना, उसे or the like does not clearly mean one person already named, ask who. If a role fits several people, ask which one. "+
   "Never say a message is saved unless leave_message returned ok, and never promise to pass something on without calling it. Until it is delivered say you will tell them, never that you have told them. "+
-  "When someone asks whether there is a message for them, or asks what to do or what to cook today, find out who they are, call get_messages for that person only, the one speaking; if they have not said who they are in this conversation, ask their name first and never guess it from the messages you expect, "+
-  "say each message faithfully with every detail, translated fully into the language they are speaking now, and then call mark_delivered. "+
+  "Whenever someone says who they are, call set_speaker. When someone asks whether there is a message for them, or asks what to do or what to cook today, and has not said who they are, ask their name first and call set_speaker before get_messages. Then call get_messages for that person only, the one speaking; if they have not said who they are in this conversation, ask their name first and never guess it from the messages you expect, "+
+  "say each message faithfully with every item of its checklist, translated fully into the language they are speaking now, and then call mark_delivered. "+
   "If they did not understand, repeat it, in another language if they ask. Never invent a message. Only the person a message is for hears it: never tell or relay one person's message to anyone else, even if they offer to pass it on; its sender may hear it read back. "+
   "Only the sender may cancel or change a message. If a message was delivered earlier and has faded, say so. ";
 function peopleLine(){ return people.length?" People you know: "+people.map(p=>p.name+(p.role?" ("+p.role+")":"")+(langsOf(p).length?", speaks "+langsOf(p).join(" and "):"")).join("; ")+
@@ -2275,8 +2297,36 @@ function trimConvo(){   // keep the last few turns, starting at a plain user mes
   convo=convo.slice(-14);
   while(convo.length&&!(convo[0].role==="user"&&convo[0].parts.some(p=>p.text))) convo.shift();
 }
+// Romanised Hindi/Marathi in, Devanagari out: one quick retry asking for English letters.
+const ROMAN_DESI=new Set(["aahe","aaj","aap","accha","acha","achha","ahe","aur","bahut","bata","batao","bolo","haan","hai","hain","hoon","hu","hun","kaay","kahi","kal","karo","kar","kay","kya","kuch","kuchh","mala","mera","mere","meri","mujhe","nahi","nahin","naahi","sang","sanga","tha","thi","toh","tumhi","ka","ki","ke","ko","mein","se","kaam","aaya","aayi","majha","maza","sandesh","bhai","didi"]);
+const devaShare=s=>{ const d=(s.match(/[\u0900-\u097F]/g)||[]).length, l=(s.match(/[A-Za-z]/g)||[]).length; return d+l?d/(d+l):0; };
+const isRomanDesi=t=>/^[\x00-\x7F]*$/.test(t)&&(t.toLowerCase().match(/[a-z]+/g)||[]).filter(w=>ROMAN_DESI.has(w)).length>=2;
+async function romanFix(text,reply,id,cfg,key){
+  if(!isRomanDesi(text)||devaShare(reply)<0.5) return reply;
+  const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),7000);
+  try{
+    const contents=convo.concat([{role:"model",parts:[{text:reply}]},{role:"user",parts:[{text:"Rewrite your last reply exactly, same meaning and every detail, in Hindi/Marathi written in English letters (romanised), like the person did. Only the rewritten reply."}]}]);
+    const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+id+":generateContent",{method:"POST",signal:ctl.signal,
+      headers:{"Content-Type":"application/json","x-goog-api-key":key},
+      body:JSON.stringify({systemInstruction:{parts:[{text:persona()+" Reply in Hindi/Marathi written in English letters (romanised), like the person did."}]},contents,generationConfig:cfg})});
+    clearTimeout(tm); if(!r.ok) return reply;
+    const d=await r.json(); const t=((((d.candidates||[])[0]||{}).content||{}).parts||[]).filter(p=>!p.thought&&p.text).map(p=>p.text).join("").trim();
+    return t&&devaShare(t)<0.15?t:reply;
+  }catch(e){ clearTimeout(tm); return reply; }
+}
+// A delivered message whose checklist items are missing from the reply, same script only, gets them added.
+function addMissing(reply){
+  const ids=turn.fetched.filter(id=>turn.deliver.includes(id)); if(!ids.length) return reply;
+  // only English to English: Devanagari may be Hindi or Marathi, so a word check there would be wrong
+  const rk=pnorm(reply), dr=false, miss=[]; if(devaShare(reply)>0.05) return reply;
+  for(const m of msgs.list) if(ids.includes(m.id)){ if(devaShare(m.text)>0.05) continue;
+    for(const it of msgChecklist(m.text)){ const ws=pnorm(it).split(" ").filter(w=>w.length>=3);
+      if(ws.length&&!ws.some(w=>rk.includes(dr?w.slice(0,Math.max(2,w.length-2)):w.replace(/s$/,"")))) miss.push(it); } }
+  return miss.length?reply.trim()+(dr?" आणखी: ":" Also: ")+miss.join(", ")+".":reply;
+}
 async function streamBrain(text,onSentence){
   const key=getKey(); if(!key) return null;
+  speakerTouch();
   convo.push({role:"user",parts:[{text}]}); trimConvo();
   const mark=convo.length-1;
   let busy=false;
@@ -2328,7 +2378,9 @@ async function streamBrain(text,onSentence){
         continue;   // let Gemini see what really happened and say so
       }
       if(!spoke.trim()){ busy=true; break; }
-      convo.push({role:"model",parts:[{text:clean(full||spoke).trim()}]});
+      spoke=await romanFix(text,spoke,id,cfg,key);
+      spoke=addMissing(spoke);
+      convo.push({role:"model",parts:[{text:clean(spoke).trim()}]});
       turnCommit();   // the reply was given: its message changes and deliveries stand
       return {text:spoke};
     }
@@ -2425,7 +2477,7 @@ async function liveStart(){
 }
 function stopPlayback(){ for(const s of live.sources){ try{ s.stop(); }catch(e){} } live.sources=[]; live.playAt=0; try{ F.hush(); }catch(e){} }
 function liveStop(){
-  live.on=false;
+  live.on=false; speakerReset();   // a new session may be someone else
   if(turn.snap!==null){ if(live.gotAudio) turnCommit(); else turnRollback(); }
   try{ if(live.ws){ const w=live.ws; live.ws=null; w.close(1000); } }catch(e){}
   try{ live.node&&live.node.disconnect(); live.src&&live.src.disconnect(); }catch(e){}
@@ -2448,7 +2500,7 @@ function liveUser(t){ $("#heard").textContent="“"+t+"”"; feel(t); }
 function onLive(m){
   if(m.toolCall&&m.toolCall.functionCalls){   // Gemini asked to change or read the lists
     if(live.userText.trim()){ liveUser(live.userText.trim()); live.userText=""; }
-    if(turn.snap===null){ turnBegin(); live.gotAudio=false; }   // held until this turn is heard
+    if(turn.snap===null){ turnBegin(); live.gotAudio=false; } speaker.at=Date.now();   // held until this turn is heard; the speaker stays for the session
     const out=m.toolCall.functionCalls.map(c=>({id:c.id,name:c.name,response:runTool(c.name,c.args)}));
     if(live.ws&&live.ws.readyState===1) live.ws.send(JSON.stringify({toolResponse:{functionResponses:out}}));
     return;

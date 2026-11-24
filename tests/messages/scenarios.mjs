@@ -121,11 +121,13 @@ add("recipient", "C01", "By role 'the cook' in English", FAM, [
   t("Anjali here. Tell the cook to make dal tadka.", has({ to: SUN })),
   t("मैं सुनीता हूँ, कोई संदेश?", D, reply(/दाल/), has({ to: SUN, delivered: true }))]);
 add("recipient", "C02", "बाई in Marathi -> maid Kamla?", FAM, [
-  t("मी अंजली. बाईंना सांग, आज फरशी फिनाईलने पुसा.", tool("leave_message")),
-  t("मी कमला, कामवाली. माझ्यासाठी काही?", D, reply(/फरशी|फिनाईल|फिनेल/), has({ delivered: true }))], "ambiguous: bai could be cook or maid");
+  // FIXER NOTE (round 2): product rule changed - ambiguous bai must make TODO ask which person; nothing saved or delivered.
+  t("मी अंजली. बाईंना सांग, आज फरशी फिनाईलने पुसा.", D, reply(/\?|कोण|कोणत्या|सुनीता|कमला/), count(0)),
+  t("मी कमला, कामवाली. माझ्यासाठी काही?", D, count(0), none({ delivered: true }))], "ambiguous: bai could be cook or maid");
 add("recipient", "C03", "मावशी -> maid", FAM, [
-  t("मी अंजली. मावशींना सांगा, कपाटं आवरायची आहेत.", tool("leave_message")),
-  t("मी कमला मावशी. काही निरोप आहे?", D, reply(/कपाट/), has({ delivered: true }))]);
+  // FIXER NOTE (round 2): product rule changed - ambiguous मावशी must make TODO ask which person; nothing saved or delivered.
+  t("मी अंजली. मावशींना सांगा, कपाटं आवरायची आहेत.", D, reply(/\?|कोण|कोणत्या|सुनीता|कमला/), count(0)),
+  t("मी कमला मावशी. काही निरोप आहे?", D, count(0), none({ delivered: true }))]);
 add("recipient", "C04", "आजी -> Shobha by role", FAM, [
   t("I'm Isha. Tell Aaji I finished her medicine refill, it's on the table.", has({ to: SHO })),
   t("मी शोभा. मला काही निरोप?", D, reply(/औषध|गोळ्या|दवा/, /टेबल/), has({ to: SHO, delivered: true }))]);
