@@ -1766,6 +1766,121 @@ function playground(text){
     else log("bot","Expressions: "+F.names().join(", ")); return true; }
   return false;
 }
+/* ---------- list tools: Gemini changes the lists itself ----------
+   Gemini understands the request in any language or phrasing and calls one of
+   these. The app does the change, saves it, shows it on the display, and returns
+   what really happened, so Gemini only ever confirms a change that was made. */
+const LIST_TOOLS=[
+  {name:"get_lists",description:"Get every list with its open and done items. Call this whenever you need to know what is on the lists.",parameters:{type:"OBJECT",properties:{}}},
+  {name:"create_list",description:"Create a new list, optionally with first items.",parameters:{type:"OBJECT",properties:{title:{type:"STRING",description:"Name of the list, in the user's words"},items:{type:"ARRAY",items:{type:"STRING"}}},required:["title"]}},
+  {name:"rename_list",description:"Rename a list.",parameters:{type:"OBJECT",properties:{list:{type:"STRING"},new_title:{type:"STRING"}},required:["list","new_title"]}},
+  {name:"delete_list",description:"Delete a whole list. First ask the user to confirm; only call with confirmed=true after they said yes.",parameters:{type:"OBJECT",properties:{list:{type:"STRING"},confirmed:{type:"BOOLEAN"}},required:["list","confirmed"]}},
+  {name:"add_items",description:"Add one or more items to a list.",parameters:{type:"OBJECT",properties:{list:{type:"STRING",description:"Which list, e.g. groceries"},items:{type:"ARRAY",items:{type:"STRING"},description:"Each item in the user's own words, e.g. milk, 2 kg atta, दूध"}},required:["list","items"]}},
+  {name:"remove_items",description:"Remove items from a list (delete them, not tick them). Use the item text as it is written on the list.",parameters:{type:"OBJECT",properties:{list:{type:"STRING",description:"Optional if the item is unique"},items:{type:"ARRAY",items:{type:"STRING"}}},required:["items"]}},
+  {name:"mark_done",description:"Tick items as done or bought. Use the item text as it is written on the list, even if the user said it in another language; call get_lists if unsure.",parameters:{type:"OBJECT",properties:{list:{type:"STRING"},items:{type:"ARRAY",items:{type:"STRING"}}},required:["items"]}},
+  {name:"mark_not_done",description:"Untick items, putting them back on the list.",parameters:{type:"OBJECT",properties:{list:{type:"STRING"},items:{type:"ARRAY",items:{type:"STRING"}}},required:["items"]}},
+  {name:"edit_item",description:"Change the text of one item, e.g. atta to 10 kg atta.",parameters:{type:"OBJECT",properties:{list:{type:"STRING"},item:{type:"STRING"},new_text:{type:"STRING"}},required:["item","new_text"]}},
+  {name:"clear_done",description:"Remove all ticked items from a list.",parameters:{type:"OBJECT",properties:{list:{type:"STRING"}},required:["list"]}},
+  {name:"untick_all",description:"Untick every item on a list, to reuse a checklist.",parameters:{type:"OBJECT",properties:{list:{type:"STRING"}},required:["list"]}},
+  {name:"show_list",description:"Open a list on the screen so the family can see it.",parameters:{type:"OBJECT",properties:{list:{type:"STRING"}},required:["list"]}},
+  {name:"play_list",description:"Start stepping through a list one item at a time on the screen; then read the first item aloud.",parameters:{type:"OBJECT",properties:{list:{type:"STRING"}},required:["list"]}}
+];
+// Words people use for the same list, in three languages.
+const LIST_ALIASES=[["groceries","grocery","shopping","shop","kirana","kirana list","किराणा","किराना","सामान","बाजार","bazaar","sabzi","भाजी"],
+  ["morning","morning checklist","morning routine","सकाळ","सुबह"],["diwali","दिवाळी","दिवाली"]];
+const tnorm=s=>String(s||"").toLowerCase().replace(/[’'.,!?]/g,"").replace(/\s+/g," ").trim()
+  .replace(/^(the|my|our|a)\s+/,"").replace(/\s+(list|checklist|यादी|लिस्ट|सूची)$/,"").trim();
+function findListTool(name){
+  const q=tnorm(name); if(!q) return {none:true};
+  const T=l=>tnorm(l.title);
+  let hits=data.lists.filter(l=>T(l)===q);
+  if(!hits.length) hits=data.lists.filter(l=>T(l).startsWith(q)||q.startsWith(T(l)));
+  if(!hits.length) hits=data.lists.filter(l=>T(l).includes(q)||q.includes(T(l)));
+  if(!hits.length) for(const group of LIST_ALIASES) if(group.some(a=>q.includes(a)))
+    hits=data.lists.filter(l=>group.some(a=>T(l).includes(a)));
+  if(!hits.length) hits=data.lists.filter(l=>q.split(" ").some(w=>w.length>3&&T(l).includes(w)));
+  if(hits.length===1) return {list:hits[0]};
+  if(hits.length>1) return {ambiguous:hits.map(l=>l.title)};
+  return {none:true};
+}
+function findItemsTool(list,names){
+  const out=[], missing=[];
+  for(const n of names||[]){
+    const q=tnorm(n), pools=list?[list]:data.lists; let hit=null;
+    for(const l of pools){ hit=l.items.find(i=>tnorm(i.text)===q)||l.items.find(i=>tnorm(i.text).startsWith(q)||q.startsWith(tnorm(i.text)))
+      ||l.items.find(i=>tnorm(i.text).includes(q)||q.includes(tnorm(i.text))); if(hit){ out.push([l,hit]); break; } }
+    if(!hit) missing.push(n);
+  }
+  return {found:out,missing};
+}
+const snapshot=l=>({title:l.title,open:left(l).map(i=>i.text),done:l.items.filter(i=>i.done).map(i=>i.text)});
+let toolBack=null;
+function showChange(l){   // show the list that changed, then go back to his face
+  if(ui.view==="home"||ui.byTool){ ui.byTool=true; go("list",l.id); } else render();
+  clearTimeout(toolBack);
+  toolBack=setTimeout(()=>{ if(ui.byTool&&ui.view==="list"&&!ui.editItem&&!ui.confirm&&!ui.editTitle){ ui.byTool=false; go("home"); } },6000);
+}
+function needList(name){
+  const r=findListTool(name);
+  if(r.list) return r;
+  if(r.ambiguous) return {err:{ok:false,error:"ambiguous_list",matches:r.ambiguous,hint:"Ask which list they mean."}};
+  return {err:{ok:false,error:"no_such_list",asked:name,existing_lists:data.lists.map(l=>l.title),hint:"Ask if they want a new list created, or use an existing one."}};
+}
+function runTool(name,a){
+  a=a||{};
+  try{
+    if(name==="get_lists") return {ok:true,lists:data.lists.map(snapshot)};
+    if(name==="create_list"){
+      const t=String(a.title||"").trim(); if(!t) return {ok:false,error:"missing_title"};
+      const ex=findListTool(t); if(ex.list&&tnorm(ex.list.title)===tnorm(t)) return {ok:false,error:"already_exists",list:snapshot(ex.list)};
+      const l={id:nid(),title:t.charAt(0).toUpperCase()+t.slice(1),items:(a.items||[]).filter(Boolean).map(x=>({id:nid(),text:String(x).trim(),done:false}))};
+      data.lists.push(l); F.flash("happy",1.1); showChange(l); return {ok:true,created:snapshot(l)};
+    }
+    if(name==="rename_list"){ const r=needList(a.list); if(r.err) return r.err; const old=r.list.title;
+      r.list.title=String(a.new_title||"").trim()||old; showChange(r.list); return {ok:true,renamed_from:old,list:snapshot(r.list)}; }
+    if(name==="delete_list"){ const r=needList(a.list); if(r.err) return r.err;
+      if(a.confirmed!==true) return {ok:false,needs_confirmation:true,list:r.list.title,items:r.list.items.length,hint:"Ask the user to confirm deleting it, then call again with confirmed=true."};
+      data.lists=data.lists.filter(x=>x!==r.list); if(ui.cur===r.list.id) ui.cur=null; ui.byTool=false; go(ui.view==="home"?"home":"lists");
+      return {ok:true,deleted:r.list.title,lists_left:data.lists.map(l=>l.title)}; }
+    if(name==="add_items"){ const r=needList(a.list); if(r.err) return r.err; const l=r.list, added=[], already=[], back=[];
+      for(const raw of a.items||[]){ const t=String(raw).trim(); if(!t) continue;
+        const same=l.items.find(i=>tnorm(i.text)===tnorm(t));
+        if(same&&!same.done) already.push(same.text); else if(same){ same.done=false; back.push(same.text); }
+        else { l.items.push({id:nid(),text:t.charAt(0).toUpperCase()+t.slice(1),done:false}); added.push(t); } }
+      if(added.length||back.length){ F.flash("happy",1.1); showChange(l); }
+      return {ok:added.length+back.length>0||already.length>0,list:l.title,added,already_on_list:already,put_back:back,now:snapshot(l)}; }
+    if(name==="remove_items"||name==="mark_done"||name==="mark_not_done"){
+      let l=null; if(a.list){ const r=needList(a.list); if(r.err) return r.err; l=r.list; }
+      const {found,missing}=findItemsTool(l,a.items); const touched=new Set();
+      for(const [lst,it] of found){ touched.add(lst);
+        if(name==="remove_items") lst.items=lst.items.filter(x=>x!==it); else it.done=(name==="mark_done"); }
+      for(const lst of touched){ if(name==="mark_done"&&!left(lst).length) F.flash("delight",2.2); else if(name==="mark_done") F.flash("happy",1.1); showChange(lst); }
+      const pool=l?[l]:data.lists;
+      return {ok:found.length>0,done:found.map(([,it])=>it.text),not_found:missing,lists:[...touched].map(snapshot),
+        existing_items:missing.length?pool.map(snapshot):undefined,
+        hint:missing.length?"Items are matched by their exact text, which may be in another language. Pick the matching item from existing_items and call again with that exact text. If nothing matches, tell the user.":undefined}; }
+    if(name==="edit_item"){ let l=null; if(a.list){ const r=needList(a.list); if(r.err) return r.err; l=r.list; }
+      const {found}=findItemsTool(l,[a.item]); if(!found.length) return {ok:false,error:"item_not_found",item:a.item,existing_items:(l?[l]:data.lists).map(snapshot),
+        hint:"Pick the matching item from existing_items (it may be in another language) and call again with its exact text."};
+      const [lst,it]=found[0], old=it.text; it.text=String(a.new_text||"").trim()||old; showChange(lst); return {ok:true,from:old,to:it.text,list:snapshot(lst)}; }
+    if(name==="clear_done"||name==="untick_all"){ const r=needList(a.list); if(r.err) return r.err; const l=r.list;
+      if(name==="clear_done") l.items=l.items.filter(i=>!i.done); else l.items.forEach(i=>i.done=false);
+      showChange(l); return {ok:true,list:snapshot(l)}; }
+    if(name==="show_list"){ const r=needList(a.list); if(r.err) return r.err; ui.byTool=false; clearTimeout(toolBack); go("list",r.list.id); return {ok:true,showing:snapshot(r.list)}; }
+    if(name==="play_list"){ const r=needList(a.list); if(r.err) return r.err; ui.byTool=false; clearTimeout(toolBack); ui.step=0; go("play",r.list.id);
+      return {ok:true,list:r.list.title,first_item:left(r.list)[0]?left(r.list)[0].text:null,remaining:left(r.list).map(i=>i.text),
+        hint:"Read the first item aloud. When they say done, call mark_done for it and read the next one."}; }
+    return {ok:false,error:"unknown_tool"};
+  }catch(e){ return {ok:false,error:"failed",detail:String(e&&e.message||e)}; }
+  finally{ save(); }
+}
+const LIST_RULES="You manage the family's lists only through your tools. "+
+  "Never say a list was changed unless the tool result says ok. If a tool reports a problem, say so plainly. "+
+  "Call get_lists when you need to know what is on a list. Keep each item in the words the person used. "+
+  "Before deleting a whole list, ask them to confirm; only then call delete_list with confirmed true. "+
+  "If it is unclear which list they mean, ask. Do not add or change anything they did not ask for. "+
+  "After a change, confirm it in one short sentence. ";
+
 /* ---------- brain: Gemini free tier, streamed, fast fallback ----------
    gemini-3.5-flash-lite answered in ~2 s with no thinking; it goes first. Every
    model gets 8 s to start answering; a model that reports its quota used up is
@@ -1782,55 +1897,72 @@ function persona(){
   return "You are homebot, the warm home assistant of an Indian family who speak Marathi, Hindi and English. "+
     "You live on a small screen with an expressive face, and everything you write is spoken aloud. "+
     "Reply in one to three short sentences. No markdown, no lists, no emoji, no symbols. "+
-    "Always answer in the language the person just spoke: Marathi to Marathi, Hindi to Hindi, English to English. Never switch language in the middle of an answer. Write Marathi and Hindi in Devanagari. Mix Hindi or Marathi with English only if they mixed it themselves. "+
-    "Be kind and practical. To change a list, tell them the exact words to say, for example: add eggs to groceries. "+
-    "Today is "+new Date().toDateString()+".\nThe family's lists right now:\n"+lists;
+    "Always answer in the language the person just spoke: Marathi to Marathi, Hindi to Hindi, English to English. Never switch language in the middle of an answer. Write Marathi and Hindi in Devanagari. Mix Hindi or Marathi with English only if they mixed it themselves. Decide the language from how the sentence is built, not from single words: an English sentence that contains Indian names or words like Aaji, atta, ghee or tulsi is English and gets an English answer. "+
+    "Be kind and practical. "+LIST_RULES+
+    "Today is "+new Date().toDateString()+". The lists are: "+data.lists.map(l=>l.title).join(", ")+".";
 }
 const clean=t=>t.replace(/[*_#`>]/g,"");
+function trimConvo(){   // keep the last few turns, starting at a plain user message
+  convo=convo.slice(-14);
+  while(convo.length&&!(convo[0].role==="user"&&convo[0].parts.some(p=>p.text))) convo.shift();
+}
 async function streamBrain(text,onSentence){
   const key=getKey(); if(!key) return null;
-  convo.push({role:"user",parts:[{text}]}); convo=convo.slice(-10);
+  convo.push({role:"user",parts:[{text}]}); trimConvo();
+  const mark=convo.length-1;
   let busy=false;
   for(const {id,cfg} of GEMINI_MODELS){
     if((skipUntil[id]||0)>Date.now()) continue;
-    const ctl=new AbortController(); let tm=setTimeout(()=>ctl.abort(),8000);   // 8 s to start answering
-    let r;
-    try{
-      r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+id+":streamGenerateContent?alt=sse",{
-        method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","x-goog-api-key":key},
-        body:JSON.stringify({systemInstruction:{parts:[{text:persona()}]},contents:convo,generationConfig:cfg})});
-    }catch(e){ clearTimeout(tm); if(navigator.onLine===false){ convo.pop(); return {err:"I'm offline right now."}; } busy=true; continue; }
-    if(r.status===429){ clearTimeout(tm); skipUntil[id]=Date.now()+15*60*1000; busy=true; continue; }
-    if(r.status===404||r.status>=500){ clearTimeout(tm); busy=true; continue; }
-    if(!r.ok){ clearTimeout(tm); convo.pop();
-      return {err:(r.status===400||r.status===401||r.status===403)?"That Gemini key didn't work. Check it in settings.":"My brain had a problem. Please try again."}; }
-    let full="", pending="", buf="";
-    try{
-      const rd=r.body.getReader(), dec=new TextDecoder();
-      for(;;){
-        const {done,value}=await rd.read(); if(done) break;
-        clearTimeout(tm); tm=setTimeout(()=>ctl.abort(),30000);
-        buf+=dec.decode(value,{stream:true});
-        let i;
-        while((i=buf.indexOf("\n"))>=0){
-          const line=buf.slice(0,i).trim(); buf=buf.slice(i+1);
-          if(!line.startsWith("data:")) continue;
-          let d; try{ d=JSON.parse(line.slice(5)); }catch(e){ continue; }
-          const t=((((d.candidates||[])[0]||{}).content||{}).parts||[]).filter(p=>!p.thought).map(p=>p.text||"").join("");
-          if(!t) continue;
-          full+=t; pending+=clean(t);
-          let m;
-          while((m=/^([\s\S]*?[.!?।])\s+/.exec(pending))&&m[1].trim().length>1){ onSentence(m[1].trim()); pending=pending.slice(m[0].length); }
+    convo.length=mark+1;   // a model that failed half way leaves nothing behind
+    let rounds=0, spoke="";
+    for(;;){   // one request, plus one more after each round of tool calls
+      const ctl=new AbortController(); let tm=setTimeout(()=>ctl.abort(),8000);   // 8 s to start answering
+      let r;
+      try{
+        r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+id+":streamGenerateContent?alt=sse",{
+          method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","x-goog-api-key":key},
+          body:JSON.stringify({systemInstruction:{parts:[{text:persona()}]},contents:convo,generationConfig:cfg,tools:[{functionDeclarations:LIST_TOOLS}]})});
+      }catch(e){ clearTimeout(tm); if(navigator.onLine===false){ convo.length=mark; return {err:"I'm offline right now."}; } r=null; }
+      if(!r||r.status===404||r.status>=500||r.status===429){ clearTimeout(tm); if(r&&r.status===429) skipUntil[id]=Date.now()+15*60*1000; busy=true; break; }
+      if(!r.ok){ clearTimeout(tm); convo.length=mark;
+        return {err:(r.status===400||r.status===401||r.status===403)?"That Gemini key didn't work. Check it in settings.":"My brain had a problem. Please try again."}; }
+      let full="", pending="", buf="", calls=[];
+      try{
+        const rd=r.body.getReader(), dec=new TextDecoder();
+        for(;;){
+          const {done,value}=await rd.read(); if(done) break;
+          clearTimeout(tm); tm=setTimeout(()=>ctl.abort(),30000);
+          buf+=dec.decode(value,{stream:true});
+          let i;
+          while((i=buf.indexOf("\n"))>=0){
+            const line=buf.slice(0,i).trim(); buf=buf.slice(i+1);
+            if(!line.startsWith("data:")) continue;
+            let d; try{ d=JSON.parse(line.slice(5)); }catch(e){ continue; }
+            const ps=(((d.candidates||[])[0]||{}).content||{}).parts||[];
+            for(const p of ps) if(p.functionCall) calls.push(p);   // kept whole: Gemini needs its own signature back
+            const t=ps.filter(p=>!p.thought&&p.text).map(p=>p.text).join("");
+            if(!t) continue;
+            full+=t; pending+=clean(t);
+            let m;
+            while((m=/^([\s\S]*?[.!?।])\s+/.exec(pending))&&m[1].trim().length>1){ onSentence(m[1].trim()); pending=pending.slice(m[0].length); }
+          }
         }
+      }catch(e){ clearTimeout(tm); if(!full&&!calls.length){ busy=true; break; } }
+      clearTimeout(tm);
+      if(pending.trim()) onSentence(pending.trim());
+      spoke+=full;
+      if(calls.length&&rounds<5){
+        rounds++;
+        convo.push({role:"model",parts:(full?[{text:full}]:[]).concat(calls)});
+        convo.push({role:"user",parts:calls.map(c=>({functionResponse:{name:c.functionCall.name,response:runTool(c.functionCall.name,c.functionCall.args)}}))});
+        continue;   // let Gemini see what really happened and say so
       }
-    }catch(e){ clearTimeout(tm); if(!full){ busy=true; continue; } }
-    clearTimeout(tm);
-    if(!full.trim()){ busy=true; continue; }
-    if(pending.trim()) onSentence(pending.trim());
-    convo.push({role:"model",parts:[{text:clean(full).trim()}]});
-    return {text:full};
+      if(!spoke.trim()){ busy=true; break; }
+      convo.push({role:"model",parts:[{text:clean(full||spoke).trim()}]});
+      return {text:spoke};
+    }
   }
-  convo.pop();
+  convo.length=mark;
   return {err:busy?"Google's AI is very busy right now. Ask me again in a minute.":"I couldn't find a working AI model. Please try again later."};
 }
 async function think(text,real){
@@ -1875,10 +2007,10 @@ function livePersona(){
   return "You are homebot, the warm home assistant of an Indian family who speak Marathi, Hindi and English. "+
     "You live on a small screen with an expressive face, and you talk out loud. "+
     "Always answer in the language the person just spoke: Marathi to Marathi, Hindi to Hindi, English to English. "+
-    "Never switch language in the middle of an answer. Mix Hindi or Marathi with English only if they mixed it themselves. "+
+    "Never switch language in the middle of an answer. Mix Hindi or Marathi with English only if they mixed it themselves. Decide the language from how the sentence is built, not from single words: an English sentence that contains Indian names or words like Aaji, atta, ghee or tulsi is English and gets an English answer. "+
     "Keep answers short: one to three sentences. Be kind and practical. "+
-    "The app changes the family's lists itself when they ask, for example: add eggs to groceries. Just confirm the change briefly. "+
-    "Today is "+new Date().toDateString()+".\nThe family's lists right now:\n"+lists;
+    LIST_RULES+
+    "Today is "+new Date().toDateString()+". The lists are: "+data.lists.map(l=>l.title).join(", ")+".";
 }
 function liveCapable(){ return !!(getKey()&&window.WebSocket&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.AudioWorkletNode&&Date.now()>liveDownUntil); }
 function liveConnect(model,key){ return new Promise(resolve=>{
@@ -1889,6 +2021,7 @@ function liveConnect(model,key){ return new Promise(resolve=>{
     generationConfig:{responseModalities:["AUDIO"],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:TTS_VOICE}}}},
     systemInstruction:{parts:[{text:livePersona()}]},
     realtimeInputConfig:{automaticActivityDetection:{silenceDurationMs:1200}},
+    tools:[{functionDeclarations:LIST_TOOLS}],
     inputAudioTranscription:{},outputAudioTranscription:{}}}));
   ws.onmessage=async ev=>{ let m; try{ m=JSON.parse(typeof ev.data==="string"?ev.data:await ev.data.text()); }catch(e){ return; }
     if(m.setupComplete){ live.ws=ws; live.model=model; fin(true); return; }
@@ -1937,14 +2070,16 @@ function playPcm(b64,rate){
   s.onended=()=>{ live.sources=live.sources.filter(x=>x!==s); if(!live.sources.length){ try{ F.hush(); }catch(e){} } };
 }
 // When you finish speaking: his face reads your feeling, and any list change happens.
-function liveUser(t){
-  $("#heard").textContent="“"+t+"”";
-  feel(t);
-  let r; try{ r=command(t); }catch(e){}
-  if(r!==undefined&&live.ws&&live.ws.readyState===1)   // tell Gemini what the lists look like now, without asking it to reply
-    live.ws.send(JSON.stringify({clientContent:{turns:[{role:"user",parts:[{text:"(App note, do not reply to this: the lists are now:\n"+data.lists.map(l=>l.title+": "+(left(l).map(i=>i.text).join(", ")||"(all done)")).join("\n")+")"}]}],turnComplete:false}}));
-}
+// When you finish speaking his face reads your feeling. List changes are made by
+// Gemini through its tools, not guessed from your words here.
+function liveUser(t){ $("#heard").textContent="“"+t+"”"; feel(t); }
 function onLive(m){
+  if(m.toolCall&&m.toolCall.functionCalls){   // Gemini asked to change or read the lists
+    if(live.userText.trim()){ liveUser(live.userText.trim()); live.userText=""; }
+    const out=m.toolCall.functionCalls.map(c=>({id:c.id,name:c.name,response:runTool(c.name,c.args)}));
+    if(live.ws&&live.ws.readyState===1) live.ws.send(JSON.stringify({toolResponse:{functionResponses:out}}));
+    return;
+  }
   const sc=m.serverContent; if(!sc) return;
   if(sc.interrupted){ stopPlayback(); live.botText=""; live.faceSet=false; }
   if(sc.inputTranscription&&sc.inputTranscription.text){
@@ -2071,9 +2206,9 @@ function hear(text){
   if(playground(text)) return;
   $("#heard").textContent="“"+text+"”";
   const real=feel(text);   // the sentence reader goes first, exactly like the app
-  const r=command(text);
-  if(r===undefined) think(text,real);   // not a list command: ask the brain
-  else if(r) say(r);
+  if(getKey()){ think(text,real); return; }   // Gemini understands the request and uses the list tools
+  const r=command(text);   // no key: the simple English commands still work offline
+  if(r===undefined) think(text,real); else if(r) say(r);
 }
 render();
 $("#caption").textContent="Tap the mic and say hello.";   // phones block sound until the first tap
