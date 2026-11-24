@@ -121,3 +121,15 @@ Cancel/change (G01–G08 conclusive: paneer replaces bhindi, 7 to 8, 10 to 15 ro
 - Live re-run (A16, B05, B08, C02, C03, C06, E06, F07, G03, H04): **all BUSY.** Gemini free-tier quota was exhausted (429 on all models) from the second turn on. The only conclusive turns were A16 t1 and B08 t1 (leave_message OK). I stopped the run; I did not run I02, K06, H09, K02, the 20-scenario spot check or the stubbed list test, because they would also have come back busy.
 - **Before/after is not measurable yet. Re-run on a fresh quota:** `F07|I02|B05|B08|K06|A16|C02|C03|E06|C06|G03|H04|H09|K02`, then the spot set `A03|A10|A18|B02|C04|C09|D02|E01|E08|F03|F06|G05|H05|I01|I07|J02|L01|M02|N01|O03`.
 - Risk to watch: if the model skips set_speaker, get_messages now refuses. Expect one extra tool round, or a reply asking for the name, in scenarios that state the name in the same turn.
+
+## Round 2 live re-run (tester, 2026-11-25)
+### Results
+- **Targeted (14 ids):** F07, I02, B05, B08, K06, A16, C02, C03, E06, C06, G03, H04, H09, K02. Before: mixed or busy. After: **BUSY on every turn (34/34)**. Pass rate excluding busy: **n/a (0 conclusive)**.
+- **Spot check (20 ids): not run.** A direct probe of each model in GEMINI_MODELS just before it returned 429 "exceeded your current quota" for gemini-3.5-flash, gemini-3.5-flash-lite and gemini-flash-latest, and 503 "high demand" for gemini-3.1-flash-lite. Running it would only have used up more quota.
+- **Stubbed list test:** reported 1/16, but **all 16 replies were busy**, so the 15 FAILs are busy and not logic failures. One real finding: after each busy turn the lists stayed at the seed state, so the Round 2 lists rollback works live.
+- **Offline:** voice_rules.mjs **8/8 PASS**. These cover a voice match, a weak voice giving no match, no voice leading to an ask for the name, a voice claiming to be someone else being refused, a person with no voice sample being allowed, and a stale voice being ignored. probe_matching.mjs gives **18 MATCH + 2 ASK** (unchanged, as expected).
+- Watch items (a) "who are you?" after a name was given, (b) truncation ("I will"), (c) romanised Hinglish getting Devanagari and (d) dropped details: **not observable**, because Gemini never answered.
+
+### Remaining failures / root cause
+- There are no conclusive failures. The only blocker is the free-tier quota on the project key. **Re-run the same two id sets after the daily quota resets** (Pacific midnight), or with a different key.
+- Side note for a fixer: models outside the list, gemini-2.5-flash and gemini-2.0-flash, now return 404 "no longer available". GEMINI_MODELS does not use them, but LIVE_MODELS still lists `gemini-2.5-flash-native-audio-latest` as the Live fallback (`LIVE_MODELS` const, used in the Live connect loop in todo-lists/phone/phone_page.html). Check that it is still served.
