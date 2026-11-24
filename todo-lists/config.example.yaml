@@ -1,0 +1,55 @@
+# Copy this file to config.yaml and edit it. config.yaml is gitignored.
+
+household_name: "Pawar home"
+room: "living room"
+
+# Who lives here. The bot greets people by name and assigns tasks to them.
+# "role" is free text - it just helps the bot understand the household.
+people:
+  - name: Chirag
+    role: adult
+    notes: "Works in tech. Prefers short answers."
+  - name: Aai
+    role: adult
+    notes: "Speaks Marathi and Hindi."
+
+# Languages the bot should be comfortable replying in.
+languages: ["English", "Hindi", "Marathi"]
+
+brain:
+  # Which AI runs the bot. Change this one line to switch provider.
+  #
+  #   gemini      FREE. Google AI Studio key.   -> https://aistudio.google.com/apikey
+  #   groq        FREE, very fast.              -> https://console.groq.com/keys
+  #   openrouter  FREE models available.        -> https://openrouter.ai/keys
+  #   cerebras    FREE, very fast.              -> https://cloud.cerebras.ai
+  #   ollama      FREE forever, runs on your own Mac, no key, works offline
+  #   claude      Paid (~$1.50/month), the most reliable at understanding
+  #
+  engine: gemini
+
+  # Leave blank to use that engine's default model. Override to try another.
+  #   gemini -> gemini-3.8-flash      groq   -> openai/gpt-oss-120b
+  #   ollama -> qwen3:8b              claude -> claude-haiku-4-5
+  model:
+
+  # Only needed for a provider that is not in the list above.
+  base_url:
+  api_key_env:
+
+  # Claude only. Leave blank for every other engine, and blank for Haiku,
+  # which rejects this setting.
+  effort:
+
+  # Cap on reply length. Spoken answers should be short, so keep this small.
+  max_tokens: 800
+
+  # How many past turns to resend each time. Lower = less quota used.
+  history_turns: 8
+
+# Where the household database lives.
+db_path: "homebot.db"
+
+server:
+  host: "0.0.0.0"   # 0.0.0.0 so phones on your WiFi can reach it
+  port: 8080

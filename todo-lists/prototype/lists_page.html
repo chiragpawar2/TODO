@@ -1,0 +1,468 @@
+<title>homebot Lists</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: device screen (800x480, scaled to fit) beside a voice console; notes below.
+   The CRT look belongs to the face only. Every piece of interface is flat, crisp
+   and glow-free: one surface step, one accent, hairlines, no text effects. */
+:root{
+  /* page (theme-aware) */
+  --bg:#f4f5f7; --fg:#15181e; --fg2:#5d6573; --card:#ffffff; --line:#e1e4ea; --accent:#2f6fe4;
+  --font:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0c0d10; --fg:#eef1f5; --fg2:#99a1ae; --card:#15171c; --line:#262a32; --accent:#6b9cff; color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0c0d10; --fg:#eef1f5; --fg2:#99a1ae; --card:#15171c; --line:#262a32; --accent:#6b9cff; color-scheme:dark}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+.wrap{max-width:1220px;margin:0 auto;display:grid;gap:24px}
+.page-h h1{margin:0 0 4px;font-size:clamp(22px,3vw,30px);font-weight:700;letter-spacing:-.015em;text-wrap:balance}
+.page-h p{margin:0;color:var(--fg2);max-width:70ch}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+@media (max-width:980px){.stage{grid-template-columns:minmax(0,1fr)}}
+
+/* ---------- device: fixed dark, it is an OLED panel ---------- */
+.device{position:relative;width:100%;aspect-ratio:820/500;max-width:100%}
+.bezel{position:absolute;left:0;top:0;width:820px;height:500px;transform-origin:0 0;will-change:transform;background:#1c1d20;border-radius:26px;padding:10px;box-sizing:border-box;
+  box-shadow:0 24px 60px -28px rgba(0,0,0,.55),inset 0 0 0 1px #2c2d31}
+.screen{
+  --s0:#080a0e; --s1:#121419; --s2:#1a1d24; --hl:#272b34; --t1:#f3f5f8; --t2:#9aa3b2; --t3:#646c7a;
+  --acc:#5b8def; --acc-ink:#ffffff; --ok:#5b8def; --danger:#ff6b6b;
+  position:relative;width:800px;height:480px;background:var(--s0);border-radius:16px;overflow:hidden;contain:strict;
+  font-family:var(--font);color:var(--t1);font-feature-settings:"tnum" 1;-webkit-font-smoothing:antialiased}
+
+/* the face: full screen at home, a live face button in the top-right otherwise */
+#facebox{position:absolute;z-index:5;left:0;top:0;width:800px;height:480px;border-radius:0;overflow:hidden;
+  transition:left .38s cubic-bezier(.2,.8,.2,1),top .38s cubic-bezier(.2,.8,.2,1),width .38s cubic-bezier(.2,.8,.2,1),height .38s cubic-bezier(.2,.8,.2,1),border-radius .38s}
+#facebox canvas{width:100%;height:100%;display:block;will-change:transform}
+#facebox::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(to bottom,transparent 0 2px,rgba(0,0,0,.26) 2px 3px);transition:opacity .3s}
+.screen.ui #facebox{left:700px;top:12px;width:88px;height:56px;border-radius:14px;cursor:pointer;box-shadow:0 0 0 1px var(--hl)}
+.screen.ui #facebox::after{opacity:0}
+#facebox:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+/* home: bold list button, top right */
+.listbtn{position:absolute;z-index:20;right:16px;top:14px;width:60px;height:60px;border-radius:18px;display:grid;place-items:center;cursor:pointer;
+  background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);color:#fff}
+.listbtn svg{width:30px;height:30px}
+.listbtn:active{transform:scale(.96)}
+.screen.ui .listbtn{display:none}
+.caption{position:absolute;z-index:20;left:0;right:0;bottom:22px;text-align:center;padding:0 80px;
+  font-size:21px;font-weight:500;color:rgba(243,245,248,.88);min-height:28px}
+.screen.ui .caption{display:none}
+
+/* interface layer */
+#ui{position:absolute;inset:0;z-index:4;background:var(--s0);display:none;flex-direction:column}
+.screen.ui #ui{display:flex}
+.bar{height:80px;flex:none;display:flex;align-items:center;gap:10px;padding:0 116px 0 16px;border-bottom:1px solid var(--s2)}
+.bar .name{flex:1;min-width:0;font-size:24px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .name input{font:inherit;color:var(--t1);background:var(--s1);border:1.5px solid var(--acc);border-radius:12px;padding:6px 12px;width:100%;outline:none}
+.ib{flex:none;width:52px;height:52px;border-radius:14px;display:grid;place-items:center;cursor:pointer;background:var(--s1);border:1px solid var(--hl);color:var(--t1)}
+.ib svg{width:22px;height:22px}
+.ib.play{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.ib.play svg{width:24px;height:24px;margin-left:2px}
+.ib.del{color:var(--danger)}
+.ib[disabled]{opacity:.35;cursor:default}
+.ib:focus-visible,.card:focus-visible,.check:focus-visible,.btn:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.scroll{flex:1;overflow-y:auto;padding:16px 16px 20px;scrollbar-width:thin;scrollbar-color:var(--hl) transparent}
+
+/* lists grid: no page title, straight to the lists */
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.card{background:var(--s1);border:1px solid var(--s2);border-radius:16px;padding:16px;min-height:140px;cursor:pointer;text-align:left;color:var(--t1);
+  font-family:inherit;display:flex;flex-direction:column;gap:8px}
+.card h3{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.card .peek{flex:1;color:var(--t2);font-size:15px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.prog{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:var(--t2)}
+.track{flex:1;height:6px;border-radius:3px;background:var(--s2);overflow:hidden}
+.track i{display:block;height:100%;border-radius:3px;background:var(--acc);transition:width .3s}
+.card.new{align-items:center;justify-content:center;flex-direction:row;gap:8px;border-style:dashed;border-color:var(--hl);background:transparent;color:var(--t2);font-size:18px;font-weight:600}
+.card.new svg{width:22px;height:22px}
+
+/* a checklist */
+.listprog{display:flex;align-items:center;gap:12px;margin:0 0 6px;font-size:14px;font-weight:600;color:var(--t2)}
+.row{display:flex;align-items:center;gap:14px;min-height:60px;border-bottom:1px solid var(--s2)}
+.check{flex:none;width:32px;height:32px;border-radius:50%;border:2px solid var(--t3);background:transparent;display:grid;place-items:center;cursor:pointer;padding:0;color:#fff}
+.check svg{width:18px;height:18px;opacity:0}
+.row.done .check{background:var(--ok);border-color:var(--ok)}
+.row.done .check svg{opacity:1}
+.row .txt{flex:1;min-width:0;font-size:21px;font-weight:500;line-height:1.3;cursor:text;padding:8px 0}
+.row.done .txt{color:var(--t3);text-decoration:line-through;text-decoration-thickness:1.5px}
+.row .edit{flex:1;display:flex;gap:8px;align-items:center}
+.field{font:inherit;font-size:20px;font-weight:500;color:var(--t1);background:var(--s1);border:1.5px solid var(--hl);border-radius:12px;padding:0 14px;height:52px;width:100%;outline:none;box-sizing:border-box}
+.field:focus{border-color:var(--acc)}
+.btn{flex:none;height:52px;padding:0 18px;border-radius:12px;font:600 17px/1 var(--font);cursor:pointer;display:inline-flex;align-items:center;gap:8px;
+  background:var(--s1);color:var(--t1);border:1px solid var(--hl);box-sizing:border-box}
+.btn svg{width:20px;height:20px}
+.btn.primary{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.btn.danger{color:var(--danger)}
+.btn.quiet{background:transparent;border-color:transparent;color:var(--t2)}
+.add{display:flex;gap:10px;margin:14px 0 4px;align-items:stretch}
+.sect{margin:20px 0 2px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);display:flex;align-items:center;gap:8px;justify-content:space-between}
+.empty{color:var(--t2);font-size:18px;padding:22px 0 8px}
+
+/* play mode: one item at a time */
+.play{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:0 48px 10px}
+.play .stepno{font-size:15px;font-weight:600;color:var(--t2)}
+.play .now{font-size:40px;font-weight:700;letter-spacing:-.015em;line-height:1.18;text-align:center;text-wrap:balance;max-width:640px}
+.play .track{width:360px;flex:none}
+.play .ctl{display:flex;gap:12px}
+.play .btn{height:60px;font-size:19px;padding:0 24px}
+
+/* confirm, built into the screen */
+.sheet{position:absolute;inset:0;z-index:40;background:rgba(0,0,0,.66);display:grid;place-items:center}
+.sheet .box{background:var(--s1);border:1px solid var(--hl);border-radius:18px;padding:22px;width:440px;display:grid;gap:14px}
+.sheet h4{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em}
+.sheet p{margin:0;color:var(--t2);font-size:16px}
+.sheet .acts{display:flex;justify-content:flex-end;gap:10px}
+
+/* listening pill */
+.mic{position:absolute;z-index:30;left:50%;bottom:14px;transform:translate(-50%,90px);transition:transform .25s;display:flex;align-items:center;gap:12px;
+  height:46px;padding:0 18px;border-radius:23px;background:var(--s2);border:1px solid var(--hl);font-size:17px;font-weight:500;max-width:620px;white-space:nowrap;overflow:hidden}
+.mic.on{transform:translate(-50%,0)}
+.mic .dot{width:10px;height:10px;border-radius:50%;background:var(--danger);flex:none}
+@media (prefers-reduced-motion:reduce){#facebox,.mic,.track i{transition:none}}
+
+/* ---------- console ---------- */
+.console{display:grid;gap:14px;min-width:0}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.panel h3{margin:0 0 2px;font-size:15px;font-weight:700}
+.panel .hint{margin:0 0 12px;color:var(--fg2);font-size:13.5px}
+.say{display:flex;gap:8px}
+.say input{flex:1;min-width:0;height:42px;box-sizing:border-box;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--fg);padding:0 12px;font:15px var(--font)}
+.say input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.say button{height:42px;background:var(--accent);border:0;color:#fff;border-radius:10px;padding:0 16px;font:600 14px var(--font);cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chip{border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:999px;padding:6px 11px;font:13.5px var(--font);cursor:pointer;text-align:left}
+.chip:hover{border-color:var(--accent)}
+.log{display:grid;gap:8px;max-height:230px;overflow-y:auto;font-size:14px}
+.log div{display:grid;grid-template-columns:44px 1fr;gap:6px}
+.log b{font-weight:600;color:var(--fg2);font-size:12.5px;padding-top:1px}
+.log .f{color:var(--fg2);font-size:12.5px;grid-column:2}
+.note{font-size:13px;color:var(--fg2);margin:10px 2px 0}
+
+/* ---------- notes ---------- */
+.notes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:980px){.notes{grid-template-columns:minmax(0,1fr)}}
+.notes h3{margin:0 0 8px;font-size:15px;font-weight:700}
+.notes ul{margin:0;padding-left:18px;display:grid;gap:5px;color:var(--fg2);font-size:14px}
+.notes code{font:12.5px ui-monospace,Menlo,monospace;background:var(--bg);border:1px solid var(--line);padding:0 5px;border-radius:5px;color:var(--fg)}
+.tbl{overflow-x:auto}
+.tbl table{border-collapse:collapse;width:100%;font-size:13.5px}
+.tbl td{padding:6px 8px;border-top:1px solid var(--line);color:var(--fg2);vertical-align:top}
+.tbl td:first-child{color:var(--fg);white-space:nowrap;font-weight:500}
+</style>
+
+<div class="wrap">
+  <header class="page-h">
+    <h1>homebot Lists</h1>
+    <p>The family's to-do lists on the same screen as the face. Tap the list button, or just say what you need. He reads every line for how you feel, then does the list work.</p>
+  </header>
+
+  <section class="stage">
+    <div style="min-width:0">
+      <div class="device" id="device"><div class="bezel" id="bezel"><div class="screen" id="screen">
+        <div id="facebox" aria-label="homebot's face"><canvas id="face" width="800" height="480"></canvas></div>
+        <button class="listbtn" id="listbtn" aria-label="Open lists">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6H20M9.5 12H20M9.5 18H20"/><path d="M3.5 6l1.4 1.4L7 5.2M3.5 12l1.4 1.4L7 11.2M3.8 18h2.6"/></svg>
+        </button>
+        <div class="caption" id="caption"></div>
+        <div id="ui"></div>
+        <div class="mic" id="mic"><span class="dot"></span><span id="heard"></span></div>
+      </div></div></div>
+      <p class="note">800 × 480 touch screen, scaled to fit. Sample household data. Tap his face in the corner to go back to him.</p>
+    </div>
+
+    <aside class="console">
+      <div class="panel">
+        <h3>Talk to homebot</h3>
+        <p class="hint">Type what you would say. Try a feeling with a command in it.</p>
+        <form class="say" id="sayform"><input id="say" autocomplete="off" placeholder="ugh, I'm so tired, add tea to groceries" aria-label="Voice command"><button>Say</button></form>
+        <div class="chips" id="chips"></div>
+      </div>
+      <div class="panel">
+        <h3>Conversation</h3>
+        <div class="log" id="log" aria-live="polite"></div>
+      </div>
+      <div class="panel">
+        <h3>Play with the face</h3>
+        <p class="hint">Tap his face on the home screen. Or type <b>/happy</b>, <b>/angry *1.4</b>, <b>/bored happy 0.3</b>, <b>!realisation</b>, <b>&gt;hello there</b>, <b>+lean 0.8</b>.</p>
+        <div class="chips" id="pchips"></div>
+      </div>
+      <div class="panel" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="chip" id="cyc">Next expression</button>
+        <button class="chip" id="reset">Reset sample lists</button>
+      </div>
+    </aside>
+  </section>
+
+  <section class="notes">
+    <div class="panel">
+      <h3>How it works</h3>
+      <ul>
+        <li>The list button opens straight into your lists. His face moves into the top-right corner and stays live there; tap it to go back to him.</li>
+        <li>Inside a list: back and the list name on the left; edit, remove and play beside his face on the right.</li>
+        <li>Play walks the list one item at a time, read aloud. Answer done, skip or back.</li>
+        <li>Ticked items move under <i>Done</i>, so a daily checklist can be reused with <i>Untick all</i>.</li>
+        <li>Removing a list always asks first.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>What you can say</h3>
+      <div class="tbl"><table>
+        <tr><td>open groceries</td><td>show a list</td></tr>
+        <tr><td>show my lists</td><td>all lists</td></tr>
+        <tr><td>new list packing</td><td>create one</td></tr>
+        <tr><td>add eggs to groceries</td><td>add items</td></tr>
+        <tr><td>mark milk done · untick milk</td><td>tick or untick</td></tr>
+        <tr><td>change atta to 10 kg atta</td><td>edit an item</td></tr>
+        <tr><td>remove eggs</td><td>delete an item</td></tr>
+        <tr><td>rename groceries to sabzi</td><td>rename</td></tr>
+        <tr><td>what's on groceries</td><td>read it out</td></tr>
+        <tr><td>play morning checklist</td><td>step through</td></tr>
+        <tr><td>done · skip · back</td><td>while playing</td></tr>
+        <tr><td>delete list packing</td><td>asks first</td></tr>
+        <tr><td>close</td><td>back to the face</td></tr>
+      </table></div>
+    </div>
+    <div class="panel">
+      <h3>Same character, same logic</h3>
+      <ul>
+        <li>The face is the approved build's code, unchanged: palette, geometry, expressions, lip sync.</li>
+        <li>Every line you say goes through the same sentence reader as the app: expression, then low / mid / intense, and paragraphs play as beats.</li>
+        <li>List events add small reactions on top: a low <i>happy</i> on a tick, <i>delight</i> when a list is finished.</li>
+        <li>Planned in code: <code>lists</code> and <code>list_items</code> tables in <code>store.py</code>, and brain tools <code>create_list</code>, <code>add_list_item</code>, <code>set_item_done</code>, <code>show_list</code>, <code>play_list</code>.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+<!--FACE_AND_READER-->
+<script>
+(function(){
+"use strict";
+const device=document.getElementById("device"), bezel=document.getElementById("bezel");
+const fit=()=>{ bezel.style.transform="scale("+Math.min(1,device.clientWidth/820)+")"; };
+new ResizeObserver(fit).observe(device); fit();
+
+/* ---------- data ---------- */
+const SAMPLE=()=>({lists:[
+  {id:1,title:"Groceries",items:[{id:11,text:"Milk, 2 packets",done:true},{id:12,text:"Eggs, one dozen",done:false},{id:13,text:"Coriander",done:false},{id:14,text:"Tomatoes, 1 kg",done:false},{id:15,text:"Atta, 5 kg",done:false}]},
+  {id:2,title:"Morning checklist",items:[{id:21,text:"Water the tulsi and balcony plants",done:false},{id:22,text:"Aaji's BP tablet after breakfast",done:false},{id:23,text:"Pack Riya's tiffin and water bottle",done:false},{id:24,text:"Switch off the geyser",done:false}]},
+  {id:3,title:"Diwali prep",items:[{id:31,text:"Clean the balcony",done:true},{id:32,text:"Buy diyas and rangoli colours",done:false},{id:33,text:"Order sweets from Chitale",done:false},{id:34,text:"Call Mama about the visit",done:true}]}
+],nextId:100});
+let data; try{ data=JSON.parse(localStorage.getItem("hb-lists-v2")||"null")||SAMPLE(); }catch(e){ data=SAMPLE(); }
+const save=()=>{ try{ localStorage.setItem("hb-lists-v2",JSON.stringify(data)); }catch(e){} };
+const ui={view:"home",cur:null,editItem:null,editTitle:false,step:0,confirm:null};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const cur=()=>data.lists.find(l=>l.id===ui.cur);
+const nid=()=>++data.nextId;
+const left=l=>l.items.filter(i=>!i.done);
+
+/* ---------- the real face + the real reader ---------- */
+const F=window.HBFace, R=window.READER;
+// Frame pacing. A 120 Hz screen asks for 120 frames a second; the face needs 60,
+// and as the small corner button 30 is plenty. Animation is clock-based, so a
+// skipped frame never slows him down - it only saves work.
+let lastDraw=0;
+(function loop(ts){
+  const gap=ui.view==="home"?1000/60:1000/30;
+  if(ts-lastDraw>=gap-1){ lastDraw=ts; F.render(F.update()); }
+  requestAnimationFrame(loop);
+})(0);
+const react=(name,level)=>{ try{ F.flash(name,1.4); }catch(e){} };
+function feel(text){
+  // Same path as the app: read the line, then play its beats on the face.
+  let beats=[]; try{ beats=R.readBeats(text)||[]; }catch(e){}
+  const real=beats.filter(b=>b[0]!=="attentive");
+  if(real.length){ F.playSteps(real.map(b=>[b[0],b[4]||1.2,b[2]])); }
+  return real;
+}
+function say(text){ $("#caption").textContent=text; try{ F.speak(text); }catch(e){} log("bot",text); }
+function log(who,text,extra){
+  const d=document.createElement("div");
+  d.innerHTML=`<b>${who==="bot"?"bot":"you"}</b><span>${esc(text)}</span>`+(extra?`<span class="f">${esc(extra)}</span>`:"");
+  const l=$("#log"); l.appendChild(d); l.scrollTop=l.scrollHeight;
+}
+
+/* ---------- icons (bold, single stroke family) ---------- */
+const I={
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"/></svg>',
+  del:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 7V4.5h4V7M6.5 7l1 13h9l1-13"/></svg>',
+  play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  stop:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>'
+};
+const progress=l=>{ const n=l.items.length, d=n-left(l).length; return `<div class="prog"><span>${d} of ${n}</span><span class="track"><i style="width:${n?d/n*100:0}%"></i></span></div>`; };
+
+/* ---------- render ---------- */
+function render(){
+  $("#screen").classList.toggle("ui",ui.view!=="home");
+  const fb=$("#facebox");
+  if(ui.view==="home"){ fb.removeAttribute("role"); fb.removeAttribute("tabindex"); }
+  else { fb.setAttribute("role","button"); fb.setAttribute("tabindex","0"); fb.setAttribute("aria-label","Back to homebot"); }
+  let h="";
+  if(ui.view==="lists"){
+    h+=`<div class="bar"><span class="name"></span><button class="btn" data-a="newlist">${I.plus} New list</button></div><div class="scroll"><div class="grid">`;
+    for(const l of data.lists){
+      const peek=left(l).slice(0,2).map(i=>i.text).join(" · ");
+      h+=`<button class="card" data-a="open" data-id="${l.id}"><h3>${esc(l.title)}</h3><div class="peek">${peek?esc(peek):"All done"}</div>${progress(l)}</button>`;
+    }
+    h+=`<button class="card new" data-a="newlist">${I.plus} New list</button></div></div>`;
+  }
+  if(ui.view==="list"&&cur()){
+    const l=cur(), open=left(l), done=l.items.filter(i=>i.done);
+    const name=ui.editTitle?`<input id="titleIn" value="${esc(l.title)}" aria-label="List name">`:esc(l.title);
+    h+=`<div class="bar"><button class="ib" data-a="lists" aria-label="Back to lists">${I.back}</button><span class="name">${name}</span>
+      <button class="ib" data-a="rename" aria-label="Edit list name">${I.edit}</button>
+      <button class="ib del" data-a="dellist" aria-label="Remove list">${I.del}</button>
+      <button class="ib play" data-a="play" aria-label="Play list" ${open.length?"":"disabled"}>${I.play}</button></div><div class="scroll">`;
+    h+=`<div class="listprog">${progress(l)}</div>`;
+    const row=i=> ui.editItem===i.id
+      ? `<div class="row"><span class="check" aria-hidden="true"></span><form class="edit" data-form="edit" data-id="${i.id}"><input class="field" id="editIn" value="${esc(i.text)}" aria-label="Edit item"><button class="btn primary">Save</button><button type="button" class="btn danger" data-a="rmitem" data-id="${i.id}" aria-label="Delete item">${I.del}</button></form></div>`
+      : `<div class="row ${i.done?"done":""}"><button class="check" data-a="toggle" data-id="${i.id}" role="checkbox" aria-checked="${i.done}" aria-label="${esc(i.text)}">${I.check}</button><span class="txt" data-a="edititem" data-id="${i.id}">${esc(i.text)}</span></div>`;
+    h+=open.map(row).join("")||`<div class="empty">Everything on this list is done.</div>`;
+    h+=`<form class="add" data-form="add"><input class="field" id="addIn" placeholder="Add an item" aria-label="Add an item" autocomplete="off"><button class="btn primary">${I.plus} Add</button></form>`;
+    if(done.length){
+      h+=`<div class="sect"><span>Done · ${done.length}</span><span style="display:flex;gap:6px"><button class="btn quiet" data-a="untick">Untick all</button><button class="btn quiet" data-a="cleardone">Clear done</button></span></div>${done.map(row).join("")}`;
+    }
+    h+=`</div>`;
+  }
+  if(ui.view==="play"&&cur()){
+    const l=cur(), todo=left(l), it=todo[ui.step], n=l.items.length, d=n-todo.length;
+    h+=`<div class="bar"><button class="ib" data-a="stop" aria-label="Stop playing">${I.back}</button><span class="name">${esc(l.title)}</span></div><div class="play">`;
+    if(it){
+      h+=`<div class="stepno">${d+1} of ${n}</div><div class="now">${esc(it.text)}</div><span class="track"><i style="width:${n?d/n*100:0}%"></i></span>
+        <div class="ctl"><button class="btn" data-a="pback" ${ui.step?"":"disabled"}>Back</button><button class="btn" data-a="pskip">Skip</button><button class="btn primary" data-a="pdone">${I.check} Done</button></div>`;
+    } else h+=`<div class="now">All done</div><button class="btn primary" data-a="stop">Back to the list</button>`;
+    h+=`</div>`;
+  }
+  if(ui.confirm) h+=`<div class="sheet"><div class="box"><h4>${esc(ui.confirm.title)}</h4><p>${esc(ui.confirm.body)}</p><div class="acts"><button class="btn" data-a="cancel">Keep it</button><button class="btn primary" style="background:var(--danger);border-color:var(--danger)" data-a="confirm">Remove</button></div></div></div>`;
+  $("#ui").innerHTML=h;
+  const t=$("#titleIn"); if(t){ t.focus(); t.select(); t.onkeydown=e=>{ if(e.key==="Enter") saveTitle(t.value); if(e.key==="Escape"){ui.editTitle=false;render();} }; t.onblur=()=>ui.editTitle&&saveTitle(t.value); }
+  const e=$("#editIn"); if(e){ e.focus(); e.select(); e.onkeydown=k=>{ if(k.key==="Escape"){ui.editItem=null;render();} }; }
+  save();
+}
+
+/* ---------- actions ---------- */
+function go(view,id){ ui.view=view; if(id!=null) ui.cur=id; ui.editItem=null; ui.editTitle=false; if(view==="home") $("#caption").textContent=""; render(); }
+function toggle(l,it,on){ it.done=on==null?!it.done:on; if(it.done&&!left(l).length){ F.flash("delight",2.2); say(`That's everything on ${l.title}. Well done!`); } else if(it.done) F.flash("happy",1.1); render(); }
+function saveTitle(v){ const l=cur(); if(l&&v.trim()) l.title=v.trim(); ui.editTitle=false; render(); }
+function askRemove(l){ ui.confirm={title:`Remove ${l.title}?`,body:`This removes the list and its ${l.items.length} items. It can't be undone.`,run:()=>{ data.lists=data.lists.filter(x=>x!==l); go("lists"); say(`Removed ${l.title}.`); }}; render(); }
+function play(l){ ui.step=0; go("play",l.id); const t=left(l); say(t.length?`${l.title}. First: ${t[0].text}.`:`Nothing left on ${l.title}.`); }
+function step(kind){
+  const l=cur(); if(!l) return; const todo=left(l), it=todo[ui.step]; if(!it) return;
+  if(kind==="done") it.done=true; else if(kind==="skip") ui.step++; else ui.step=Math.max(0,ui.step-1);
+  const t2=left(l); if(ui.step>t2.length) ui.step=t2.length;
+  render();
+  if(!t2.length){ F.flash("delight",2.2); say(`All done with ${l.title}!`); }
+  else if(t2[ui.step]){ if(kind==="done") F.flash("happy",1); say((kind==="done"?"Done. Next: ":"")+t2[ui.step].text+"."); }
+  else say(`That's the end. ${t2.length} skipped.`);
+}
+$("#listbtn").onclick=()=>{ go(ui.cur?"list":"lists"); };
+$("#facebox").onclick=e=>{
+  if(ui.view!=="home"){ go("home"); return; }
+  // Home: the face is the real one, so it reacts to touch the same way the app does.
+  const r=$("#facebox").getBoundingClientRect();
+  const x=(e.clientX-r.left)/r.width*800, y=(e.clientY-r.top)/r.height*480;
+  const what=F.touchDown(x,y); log("you","(touched the face)",what?"face: "+what:"");
+};
+$("#facebox").onkeydown=e=>{ if((e.key==="Enter"||e.key===" ")&&ui.view!=="home"){ e.preventDefault(); go("home"); } };
+$("#ui").addEventListener("click",e=>{
+  const b=e.target.closest("[data-a]"); if(!b||b.disabled) return;
+  const a=b.dataset.a, id=+b.dataset.id, l=cur();
+  ({lists:()=>go("lists"),open:()=>go("list",id),
+    newlist:()=>{ const n={id:nid(),title:"New list",items:[]}; data.lists.push(n); go("list",n.id); ui.editTitle=true; render(); },
+    rename:()=>{ ui.editTitle=true; render(); }, dellist:()=>askRemove(l), play:()=>play(l), stop:()=>go("list"),
+    toggle:()=>{ const it=l.items.find(i=>i.id===id); if(it) toggle(l,it); },
+    edititem:()=>{ ui.editItem=id; render(); }, rmitem:()=>{ l.items=l.items.filter(i=>i.id!==id); ui.editItem=null; render(); },
+    untick:()=>{ l.items.forEach(i=>i.done=false); render(); }, cleardone:()=>{ l.items=l.items.filter(i=>!i.done); render(); },
+    cancel:()=>{ ui.confirm=null; render(); }, confirm:()=>{ const r=ui.confirm.run; ui.confirm=null; r(); },
+    pdone:()=>step("done"), pskip:()=>step("skip"), pback:()=>step("back")}[a]||(()=>{}))();
+});
+$("#ui").addEventListener("submit",e=>{
+  e.preventDefault(); const f=e.target, l=cur(); if(!l) return;
+  if(f.dataset.form==="add"){ const v=$("#addIn").value.trim(); if(v){ l.items.push({id:nid(),text:v,done:false}); F.flash("happy",.9); render(); $("#addIn").focus(); } }
+  if(f.dataset.form==="edit"){ const it=l.items.find(i=>i.id===+f.dataset.id), v=$("#editIn").value.trim(); if(it&&v) it.text=v; ui.editItem=null; render(); }
+});
+
+/* ---------- voice ---------- */
+const norm=s=>s.toLowerCase().replace(/[’']/g,"").replace(/[.?!,]/g," ").replace(/\s+/g," ").trim();
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+function findList(q){ q=norm(q).replace(/^(the|my)\s+/,"").replace(/\s+(list|checklist)$/,""); if(!q) return null;
+  const T=l=>norm(l.title); return data.lists.find(l=>T(l)===q)||data.lists.find(l=>T(l).startsWith(q))||data.lists.find(l=>T(l).includes(q))||data.lists.find(l=>q.split(" ").some(w=>w.length>3&&T(l).includes(w))); }
+function findItem(l,q){ q=norm(q).replace(/^(the|my)\s+/,""); if(!l||!q) return null; const T=i=>norm(i.text);
+  return l.items.find(i=>T(i)===q)||l.items.find(i=>T(i).startsWith(q))||l.items.find(i=>T(i).includes(q))||l.items.find(i=>q.split(" ").some(w=>w.length>3&&T(i).includes(w))); }
+function anywhere(q){ const c=cur(), it=findItem(c,q); if(it) return [c,it]; for(const l of data.lists){ const x=findItem(l,q); if(x) return [l,x]; } return [null,null]; }
+function splitIn(rest){ const m=rest.match(/^(.*?)\s+(?:to|in|on|from|into)\s+(?:the\s+|my\s+)?(.+?)(?:\s+list)?$/); if(m){ const l=findList(m[2]); if(l) return [m[1],l]; } return [rest,cur()]; }
+// The command usually sits after the feeling: "ugh I'm so tired, add tea to groceries".
+const VERB=/\b(open|show|close|create|make|new list|start|play|run|go through|rename|delete|remove|add|put|mark|tick|check|cross off|untick|uncheck|change|edit|update|clear|reset|whats on|what is on|read out)\b/;
+function command(raw){
+  let t=norm(raw), m;
+  const k=t.search(VERB); if(k>0) t=t.slice(k);
+  if(ui.confirm){ if(/^(yes|yeah|haan|ho|confirm|remove it|delete it)\b/.test(t)){ const r=ui.confirm.run; ui.confirm=null; r(); return null; }
+    if(/^(no|nahi|cancel|keep)\b/.test(t)){ ui.confirm=null; render(); return "Okay, I kept it."; } }
+  if(ui.view==="play"){ if(/^(done|did it|finished|ho gaya|zala|next)$/.test(t)){ step("done"); return null; }
+    if(/^(skip|later|not now)$/.test(t)){ step("skip"); return null; } if(/^(back|previous|go back)$/.test(t)){ step("back"); return null; }
+    if(/^(stop|close|exit)$/.test(t)){ go("list"); return "Stopped."; } }
+  if(/^(close|hide|exit|bas)( (the )?lists?)?$/.test(t)){ go("home"); return "Okay."; }
+  if(/^(show|open)( me)? (all )?(my |the )?lists$/.test(t)){ go("lists"); return `You have ${data.lists.length} lists: ${data.lists.map(l=>l.title).join(", ")}.`; }
+  if((m=t.match(/^(?:create|make|start|new)(?: a)?(?: new)? (?:list|checklist)(?: called| named)? (.+)$/))||(m=t.match(/^new list (.+)$/))){ const n={id:nid(),title:cap(m[1]),items:[]}; data.lists.push(n); go("list",n.id); return `Made a new list called ${n.title}.`; }
+  if((m=t.match(/^(?:play|run|start|go through) (?:the |my )?(.+)$/))){ const l=findList(m[1]); if(l){ play(l); return null; } }
+  if((m=t.match(/^(?:whats on|what is on|read out|read) (?:the |my )?(.+)$/))){ const l=findList(m[1]); if(!l) return `I don't have a list called ${m[1]}.`; go("list",l.id); const o=left(l).map(i=>i.text); return o.length?`${l.title}: ${o.join(", ")}.`:`Nothing left on ${l.title}.`; }
+  if((m=t.match(/^(?:open|show|show me|go to) (?:the |my )?(.+)$/))){ const l=findList(m[1]); if(!l) return `I don't have a list called ${m[1]}.`; go("list",l.id); const o=left(l).length; return `${l.title}. ${o} ${o===1?"thing":"things"} left.`; }
+  if((m=t.match(/^rename (?:the )?(.+?) (?:list )?(?:to|as) (.+)$/))){ const l=findList(m[1]); if(!l) return `I couldn't find ${m[1]}.`; const o=l.title; l.title=cap(m[2]); go("list",l.id); return `Renamed ${o} to ${l.title}.`; }
+  if((m=t.match(/^(?:delete|remove) (?:the )?list (.+)$/))||(m=t.match(/^(?:delete|remove) (?:the )?(.+?) list$/))){ const l=findList(m[1]); if(!l) return `I couldn't find a list called ${m[1]}.`; go("list",l.id); askRemove(l); return `Remove ${l.title} and its ${l.items.length} items? Say yes or no.`; }
+  if((m=t.match(/^(?:add|put) (.+)$/))){ const [what,l]=splitIn(m[1]); if(!l) return `Which list? Say "add ${what} to groceries".`;
+    const items=what.split(/\s*(?:,| and )\s*/).filter(Boolean).map(cap); items.forEach(x=>l.items.push({id:nid(),text:x,done:false})); go("list",l.id); return `Added ${items.join(" and ")} to ${l.title}.`; }
+  if((m=t.match(/^(?:mark|tick|check|cross off) (.+?)(?: (?:as )?(?:done|complete|bought|off))?$/))){ const [what]=splitIn(m[1]); const [l,it]=anywhere(what); if(!it) return `I couldn't find ${what} on any list.`; if(ui.view!=="list"||ui.cur!==l.id) go("list",l.id); toggle(l,it,true); const n=left(l).length; return n?`Ticked ${it.text}. ${n} left on ${l.title}.`:null; }
+  if((m=t.match(/^(?:untick|uncheck) (.+)$/))){ const [l,it]=anywhere(m[1]); if(!it) return `I couldn't find ${m[1]}.`; go("list",l.id); toggle(l,it,false); return `${it.text} is back on ${l.title}.`; }
+  if((m=t.match(/^(?:change|edit|update) (.+?) (?:to|into) (.+)$/))){ const [l,it]=anywhere(m[1]); if(!it) return `I couldn't find ${m[1]}.`; const o=it.text; it.text=cap(m[2]); go("list",l.id); return `Changed ${o} to ${it.text}.`; }
+  if((m=t.match(/^(?:remove|delete) (.+)$/))){ const [what]=splitIn(m[1]); const [l,it]=anywhere(what); if(!it) return `I couldn't find ${what}.`; l.items=l.items.filter(i=>i!==it); go("list",l.id); return `Removed ${it.text} from ${l.title}.`; }
+  if(/^clear (?:the )?done/.test(t)){ const l=cur(); if(!l) return "Open a list first."; l.items=l.items.filter(i=>!i.done); render(); return "Cleared the done items."; }
+  if(/^(?:reset|untick all)/.test(t)){ const l=cur(); if(!l) return "Open a list first."; l.items.forEach(i=>i.done=false); render(); return `${l.title} is reset.`; }
+  return undefined;   // not a list command
+}
+// The same playground commands as the face build: /pose [mix amt] [*intensity],
+// !sequence, >words, +lean/strain/fatigue n. Lets you check every expression here.
+function playground(text){
+  const t=text.trim();
+  if(t.startsWith(">")){ say(t.slice(1).trim()||"Testing, one two three."); return true; }
+  if(t.startsWith("!")){ const n=t.slice(1).trim(), st=F.seq(n);
+    if(st){ F.playSteps(st); log("you",t,"sequence: "+n); } else log("bot","Sequences: "+F.seqs().join(", ")); return true; }
+  if(t.startsWith("+")){ const [k,v]=t.slice(1).trim().split(/\s+/);
+    if(["lean","strain","fatigue"].includes(k)&&!isNaN(+v)){ F.mod(k,+v); log("you",t,k+" = "+v); } else log("bot","Try +lean 0.8, +strain 0.5 or +fatigue 0.6"); return true; }
+  if(t.startsWith("/")){ const b=t.slice(1).trim().split(/\s+/), n=b[0]; let mix=null,amt=.5,inten=1;
+    for(const x of b.slice(1)){ if(x[0]==="*") inten=+x.slice(1)||1; else if(!isNaN(+x)) amt=+x; else if(F.names().includes(x)) mix=x; }
+    if(F.names().includes(n)){ if(ui.view!=="home") go("home"); F.setX(n,null,mix,amt,inten);
+      log("you",t,"holding "+n+(mix?" + "+mix+" "+Math.round(amt*100)+"%":"")+(inten!==1?" @"+inten:"")); }
+    else log("bot","Expressions: "+F.names().join(", ")); return true; }
+  return false;
+}
+let demo=-1;
+function cycle(){ const n=F.names(); demo=(demo+1)%n.length; if(ui.view!=="home") go("home"); F.setX(n[demo]); $("#caption").textContent=`${n[demo]}  (${demo+1}/${n.length})`; }
+function hear(text){
+  if(playground(text)) return;
+  $("#heard").textContent="“"+text+"”"; $("#mic").classList.add("on");
+  const real=feel(text);   // the sentence reader goes first, exactly like the app
+  log("you",text,real.length?"face: "+real.map(b=>b[0]+" · "+b[1]).join(" → "):"");
+  setTimeout(()=>{ $("#mic").classList.remove("on"); const r=command(text);
+    if(r===undefined) say(real.length?"I'm here. Say \"open groceries\" or \"add eggs to groceries\" for your lists.":"Try \"open groceries\" or \"add eggs to groceries\".");
+    else if(r) say(r); },650);
+}
+$("#sayform").onsubmit=e=>{ e.preventDefault(); const v=$("#say").value.trim(); if(v){ hear(v); $("#say").value=""; } };
+const CHIPS=["open morning checklist","play morning checklist","done","skip","ugh, I'm so tired, add tea to groceries","yay! mark milk done","add coriander and green chillies to groceries","what's on diwali prep","change atta to 10 kg atta","new list packing for Goa","delete list packing for goa","yes","show my lists","close"];
+$("#chips").innerHTML=CHIPS.map(c=>`<button class="chip" type="button">${esc(c)}</button>`).join("");
+$("#chips").onclick=e=>{ const b=e.target.closest(".chip"); if(b) hear(b.textContent); };
+const PCH=["/happy *0.4","/happy *1.4","/tender","/stern","/bored happy 0.3","!realisation","!double_take","!slow_burn",">I have 25 books, call me at 7:30","+fatigue 0.7","+fatigue 0","/rest"];
+$("#pchips").innerHTML=PCH.map(c=>`<button class="chip" type="button">${esc(c)}</button>`).join("");
+$("#pchips").onclick=e=>{ const b=e.target.closest(".chip"); if(b) hear(b.textContent); };
+$("#cyc").onclick=cycle;
+$("#reset").onclick=()=>{ data=SAMPLE(); ui.cur=null; ui.confirm=null; go("home"); $("#log").innerHTML=""; say("Sample lists are back."); };
+render();
+setTimeout(()=>say(`Good morning. You have ${data.lists.length} lists today.`),600);
+})();
+</script>

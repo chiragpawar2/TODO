@@ -1,0 +1,100 @@
+OVERLAP with earlier phrase sources (>=3 words, exact/contained): 11
+    ('b005', 'I feel miserable', 'i feel miserable with this cold')
+    ('b022', "I'm so embarrassed", 'i failed my driving test i m so embarrassed i ll try again next week')
+    ('b036', 'not bad at all', 'not bad at all')
+    ('b037', "I don't hate it", 'i don t hate it')
+    ('b056', 'bahut gussa aa raha hai', 'mujhe bahut gussa aa raha hai')
+    ('b058', 'kya baat hai! zabardast', 'kya baat hai zabardast')
+    ('b072', 'मला भीती वाटते', 'मल भ त व टत')
+    ('b075', 'बहुत उदास लग रहा है', 'लग रह ह')
+    ('b080', 'धन्यवाद बेटा', 'धन यव द')
+    ('b155', "you're so cute", 'you re so cute')
+    ('mb15', 'Aaj result aaya. Main pass ho gaya! Bahut khush hoon.', 'aaj result aaya main pass ho gaya')
+
+BLIND SINGLE, CLEAN (overlapping cases removed): n=149 expression 121/149 (81.2%)  level 146/149 (98.0%)
+BLIND SINGLE: n=159 expression 131/159 (82.4%)  level 156/159 (98.1%)
+  command     n= 8 expr  8/8   level  8/8
+  context     n=10 expr  7/10  level 10/10
+  devanagari  n=12 expr 12/12  level 12/12
+  emoji       n=10 expr 10/10  level  9/10
+  family      n=10 expr  6/10  level 10/10
+  hinglish    n=14 expr 11/14  level 14/14
+  idiom       n=15 expr  9/15  level 15/15
+  kids        n= 8 expr  5/8   level  8/8
+  marathi     n= 8 expr  7/8   level  7/8
+  names       n=10 expr 10/10  level 10/10
+  negation    n=12 expr  9/12  level 12/12
+  plain       n=24 expr 24/24  level 23/24
+  sarcasm     n= 5 expr  4/5   level  5/5
+  to_bot      n= 6 expr  5/6   level  6/6
+  typo        n= 7 expr  4/7   level  7/7
+level distribution got: {'mid': 143, 'intense': 6, 'low': 10}
+
+FAILURES (E = expression wrong, l = level only):
+  l b024 [plain] 'ugh, disgusting' -> stern/low ('disgust*')  want ['angry', 'stern', 'skeptical', 'squint'] / ['mid']
+  E b029 [family] "my son didn't call on my birthday" -> skeptical/mid ('hedged birthday')  want ['sad', 'crying', 'fret'] / ['mid']
+  E b030 [family] 'Papa is coming home from the hospital today' -> worried/mid ('hospital')  want ['happy', 'delight', 'content', 'grin'] / ['mid']
+  E b032 [family] 'the kids are fighting again' -> attentive/mid (None)  want ['angry', 'stern', 'worried', 'fret'] / ['mid']
+  E b034 [family] 'my granddaughter took her first steps' -> attentive/mid (None)  want ['delight', 'happy', 'proud', 'grin'] / ['mid', 'intense']
+  E b041 [negation] "it isn't funny" -> grin/mid ('model:amusement 0.54')  want ['angry', 'stern', 'skeptical', 'sad'] / ['mid']
+  E b043 [negation] 'mujhe bilkul accha nahi lag raha' -> attentive/mid (None)  want ['sad', 'crying'] / ['mid']
+  E b044 [negation] 'mala nahi aavadla' -> attentive/mid (None)  want ['sad', 'crying', 'skeptical'] / ['mid']
+  E b048 [hinglish] 'khooshi ke maare naach rahi hoon' -> attentive/mid (None)  want ['delight', 'happy', 'proud', 'grin'] / ['mid', 'intense']
+  E b050 [hinglish] 'bindaas raho yaar' -> attentive/mid (None)  want ['happy', 'delight', 'content', 'grin'] / ['low', 'mid']
+  E b059 [hinglish] 'pagal ho gaya hai kya' -> attentive/mid (None)  want ['angry', 'stern', 'skeptical', 'surprised'] / ['mid']
+  E b065 [marathi] 'khup raag aalay' -> attentive/mid (None)  want ['angry', 'stern'] / ['mid']
+  l b067 [marathi] 'zop yetey' -> drowsy/low ('zop')  want ['drowsy', 'yawn', 'sad', 'bored'] / ['mid']
+  E b082 [idiom] "I've been down in the dumps all week" -> attentive/mid (None)  want ['sad', 'crying'] / ['mid']
+  E b085 [idiom] "I'm at my wits' end" -> sad/mid ('model:sadness 0.52')  want ['worried', 'fret', 'dread', 'angry'] / ['mid', 'intense']
+  E b090 [idiom] "I'm walking on air" -> attentive/mid (None)  want ['delight', 'happy', 'proud', 'grin'] / ['mid']
+  E b091 [idiom] 'it gets on my nerves' -> attentive/mid (None)  want ['angry', 'stern'] / ['mid']
+  E b094 [idiom] 'dil garden garden ho gaya' -> attentive/mid (None)  want ['delight', 'happy', 'proud', 'grin'] / ['mid']
+  E b095 [idiom] 'naak mein dum kar diya' -> attentive/mid (None)  want ['angry', 'stern', 'bored'] / ['mid']
+  l b104 [emoji] '🤬🤬🤬' -> angry/mid ('emoji')  want ['angry', 'stern'] / ['intense']
+  E b106 [typo] 'im so hapyy' -> attentive/mid (None)  want ['happy', 'delight', 'content', 'grin'] / ['mid']
+  E b109 [typo] 'soooo tird' -> attentive/intense (None)  want ['drowsy', 'yawn', 'sad', 'bored'] / ['mid', 'intense']
+  E b111 [typo] 'im angy' -> attentive/mid (None)  want ['angry', 'stern'] / ['mid']
+  E b114 [sarcasm] 'yeah, because I have all the time in the world' -> content/mid ('model:approval 0.54')  want ['angry', 'stern', 'skeptical', 'bored'] / ['mid']
+  E b120 [context] 'the traffic is killing me' -> attentive/mid (None)  want ['angry', 'stern', 'drowsy', 'yawn'] / ['mid']
+  E b122 [context] 'the exam was a breeze' -> attentive/mid (None)  want ['happy', 'delight', 'content', 'grin'] / ['mid']
+  E b126 [context] 'the plant is dying' -> attentive/mid (None)  want ['sad', 'crying', 'worried', 'fret'] / ['mid']
+  E b149 [kids] 'I lost my tooth!' -> fret/mid ('lost my')  want ['surprised', 'startled', 'oh', 'delight'] / ['mid', 'intense']
+  E b152 [kids] "I don't want to go to school" -> skeptical/mid ('model:disapproval 0.71')  want ['sad', 'crying', 'angry', 'stern'] / ['mid']
+  E b153 [kids] 'my balloon popped' -> attentive/mid (None)  want ['sad', 'crying', 'startled', 'surprised'] / ['mid']
+  E b159 [to_bot] 'you got it wrong again' -> attentive/mid (None)  want ['sad', 'apologetic', 'fret', 'shy'] / ['mid']
+
+BLIND MULTI: 30 paragraphs
+  XX mb01 got=[('delight', 'mid'), ('attentive', 'mid')]  want=[['delight', 'happy', 'proud'], ['sad', 'crying', 'worried']]
+  XX mb02 got=[('attentive', 'mid'), ('content', 'mid')]  want=[['worried', 'fret', 'dread'], ['attentive', 'listening', 'rest'], ['happy', 'delight', 'content']]
+  OK mb03 got=[('alarmed', 'mid'), ('content', 'mid')]  want=[['dread', 'worried', 'alarmed'], ['happy', 'delight', 'content']]
+  OK mb04 got=[('sad', 'mid'), ('shy', 'mid')]  want=[['sad', 'crying'], ['shy', 'apologetic', 'fret']]
+  OK mb05 got=[('delight', 'mid'), ('curious', 'mid')]  want=[['delight', 'happy', 'proud'], ['surprised', 'startled', 'oh']]
+  ~  mb06 got=[('drowsy', 'mid'), ('happy', 'mid')]  want=[['drowsy', 'yawn', 'sad'], ['drowsy', 'yawn', 'sad'], ['happy', 'delight', 'content']]
+  XX mb07 got=[('stern', 'mid'), ('content', 'mid')]  want=[['angry', 'stern'], ['angry', 'stern', 'attentive']]
+  OK mb08 got=[('apologetic', 'mid'), ('sad', 'mid')]  want=[['apologetic'], ['angry', 'stern', 'sad']]
+  ~  mb09 got=[('attentive', 'mid'), ('worried', 'mid')]  want=[['attentive', 'listening', 'rest'], ['worried', 'fret', 'dread'], ['worried', 'fret', 'dread']]
+  OK mb10 got=[('tender', 'mid'), ('delight', 'mid')]  want=[['tender', 'happy', 'content'], ['love', 'delight', 'happy']]
+  ~  mb11 got=[('sad', 'mid')]  want=[['sad', 'crying', 'attentive'], ['sad', 'crying']]
+  OK mb12 got=[('delight', 'mid'), ('proud', 'mid')]  want=[['surprised', 'startled', 'oh'], ['delight', 'happy', 'proud']]
+  OK mb13 got=[('worried', 'mid'), ('content', 'mid')]  want=[['dread', 'worried', 'alarmed'], ['happy', 'delight', 'content']]
+  XX mb14 got=[('startled', 'mid'), ('angry', 'mid')]  want=[['angry', 'stern'], ['attentive', 'listening', 'rest'], ['angry', 'stern']]
+  OK mb15 got=[('attentive', 'mid'), ('delight', 'mid'), ('happy', 'mid')]  want=[['attentive', 'listening', 'rest'], ['delight', 'happy', 'proud'], ['happy', 'delight', 'content']]
+  OK mb16 got=[('drowsy', 'mid'), ('attentive', 'mid')]  want=[['drowsy', 'yawn', 'sad'], ['happy', 'delight', 'content']]
+  XX mb17 got=[('worried', 'mid'), ('attentive', 'mid')]  want=[['dread', 'worried', 'alarmed'], ['happy', 'delight', 'content']]
+  XX mb18 got=[('crying', 'mid'), ('happy', 'mid')]  want=[['sad', 'crying'], ['sad', 'crying', 'attentive'], ['tender', 'sad', 'content']]
+  XX mb19 got=[('attentive', 'mid'), ('curious', 'mid')]  want=[['apologetic', 'fret', 'sad'], ['worried', 'fret', 'dread'], ['worried', 'fret', 'dread']]
+  OK mb20 got=[('grin', 'mid'), ('delight', 'mid')]  want=[['happy', 'delight', 'content'], ['happy', 'delight', 'content']]
+  OK mb21 got=[('bored', 'mid'), ('attentive', 'mid')]  want=[['bored'], ['bored', 'attentive', 'listening']]
+  OK mb22 got=[('attentive', 'mid'), ('content', 'mid')]  want=[['attentive', 'listening', 'rest'], ['happy', 'delight', 'content']]
+  XX mb23 got=[('fret', 'mid'), ('attentive', 'mid')]  want=[['angry', 'stern', 'sad'], ['sad', 'crying', 'angry']]
+  OK mb24 got=[('happy', 'mid'), ('love', 'mid')]  want=[['delight', 'happy', 'proud'], ['love', 'tender', 'happy']]
+  ~  mb25 got=[('worried', 'mid')]  want=[['worried', 'fret', 'dread'], ['dread', 'worried', 'alarmed']]
+  OK mb26 got=[('delight', 'mid'), ('attentive', 'mid')]  want=[['delight', 'happy', 'proud'], ['attentive', 'listening', 'rest']]
+  OK mb27 got=[('worried', 'mid'), ('apologetic', 'mid')]  want=[['apologetic', 'fret', 'worried'], ['apologetic']]
+  XX mb28 got=[('delight', 'mid'), ('content', 'mid'), ('worried', 'mid')]  want=[['delight', 'happy', 'proud'], ['delight', 'happy', 'proud'], ['delight', 'happy', 'proud']]
+  XX mb29 got=[('bored', 'mid'), ('attentive', 'mid')]  want=[['bored', 'angry', 'stern'], ['happy', 'delight', 'content']]
+  OK mb30 got=[('worried', 'mid'), ('dread', 'mid'), ('tender', 'mid')]  want=[['worried', 'fret', 'dread'], ['dread', 'worried', 'alarmed'], ['worried', 'fret', 'dread']]
+  CLEAN paragraphs: exact 15/29
+  beats exact-in-order 16/30 (53%); allowing merges 20/30; exact+all levels 16/30; positional beats 49/69 (71%)
+
+read(): mean 8813.5 us  max 257783.5 us

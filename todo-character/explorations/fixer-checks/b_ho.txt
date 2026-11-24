@@ -1,0 +1,52 @@
+HELD-OUT SINGLE: n=120 expression 118/120 (98%)  level 118/120 (98%)
+  plain        n=30 expr 30/30  level 28/30
+  negation     n=10 expr 10/10  level 10/10
+  hinglish     n=10 expr 10/10  level 10/10
+  devanagari   n=10 expr 10/10  level 10/10
+  emoji        n= 8 expr 8/8  level 8/8
+  typo         n= 6 expr 6/6  level 6/6
+  sarcasm      n= 5 expr 5/5  level 5/5
+  substring    n=12 expr 11/12  level 12/12
+  context      n= 8 expr 8/8  level 8/8
+  command      n= 8 expr 8/8  level 8/8
+  to_bot       n= 8 expr 8/8  level 8/8
+  overtrigger  n= 5 expr 4/5  level 5/5
+
+FAILURES (E = expression wrong, l = level only):
+  l p12 "I'm terrified, there's someone outside the door" -> dread/mid ('terrified')  want ['dread', 'alarmed', 'worried'] / ['intense']
+  l p26 "I'm overjoyed, the baby is here!" -> delight/mid ('baby is here')  want ['delight', 'happy', 'proud'] / ['intense']
+  E x11 'the train was bang on time' -> proud/mid ('bang on')  want ['happy', 'delight', 'content', 'grin', 'attentive'] / ['low', 'mid']
+  E o04 'terrible news 🙂' -> angry/mid ('terrible')  want ['sad', 'crying', 'worried', 'fret', 'dread'] / ['mid']
+
+HELD-OUT MULTI: 28 paragraphs
+  OK mm01 got=[('delight', 'mid'), ('worried', 'mid')]  want=[['delight', 'happy', 'proud'], ['worried', 'fret', 'dread']]
+  ~  mm02 got=[('content', 'mid')]  want=[['happy', 'delight', 'content'], ['content', 'happy']]
+  OK mm03 got=[('sad', 'mid'), ('curious', 'mid')]  want=[['sad', 'crying'], ['attentive', 'listening', 'rest']]
+  OK mm04 got=[('attentive', 'mid'), ('worried', 'mid')]  want=[['attentive', 'listening', 'rest'], ['worried', 'fret', 'dread']]
+  OK mm05 got=[('tender', 'mid'), ('attentive', 'mid')]  want=[['tender'], ['attentive', 'listening', 'rest']]
+  OK mm06 got=[('angry', 'intense'), ('fret', 'mid')]  want=[['angry', 'stern'], ['angry', 'stern', 'fret']]
+  OK mm07 got=[('happy', 'mid'), ('attentive', 'mid')]  want=[['grin', 'happy'], ['attentive', 'listening', 'rest']]
+  XX mm08 got=[('worried', 'mid'), ('tender', 'mid')]  want=[['worried', 'fret', 'dread'], ['worried', 'fret', 'dread'], ['worried', 'fret', 'dread']]
+  OK mm09 got=[('surprised', 'mid'), ('happy', 'mid'), ('proud', 'mid')]  want=[['surprised', 'delight'], ['delight', 'happy', 'proud'], ['proud', 'tender', 'happy']]
+  OK mm10 got=[('bored', 'mid'), ('curious', 'mid')]  want=[['bored'], ['curious', 'thinking', 'attentive']]
+  XX mm11 got=[('angry', 'mid'), ('fret', 'mid')]  want=[['apologetic'], ['worried', 'fret', 'dread']]
+  OK mm12 got=[('happy', 'mid'), ('crying', 'mid')]  want=[['happy', 'delight', 'content'], ['sad', 'crying', 'tender']]
+  ~  mm13 got=[('worried', 'mid'), ('content', 'low')]  want=[['worried', 'fret', 'dread'], ['attentive', 'listening', 'rest'], ['content']]
+  OK mm14 got=[('bored', 'mid'), ('happy', 'mid')]  want=[['bored', 'sad', 'skeptical'], ['happy', 'delight', 'content']]
+  OK mm15 got=[('worried', 'mid'), ('content', 'mid')]  want=[['worried', 'fret', 'dread'], ['content', 'happy']]
+  OK mm16 got=[('love', 'mid'), ('asleep', 'mid')]  want=[['love', 'tender'], ['asleep', 'drowsy', 'happy']]
+  OK mm17 got=[('fret', 'mid'), ('worried', 'mid')]  want=[['sad', 'fret', 'worried'], ['worried', 'fret', 'dread']]
+  XX mm18 got=[('sad', 'mid'), ('attentive', 'mid')]  want=[['sad', 'crying'], ['sad', 'crying']]
+  OK mm19 got=[('drowsy', 'mid'), ('delight', 'mid')]  want=[['drowsy'], ['delight', 'happy', 'proud']]
+  OK mm20 got=[('grin', 'low'), ('focused', 'mid')]  want=[['grin'], ['focused', 'attentive', 'listening']]
+  OK mm21 got=[('suspicious', 'mid'), ('skeptical', 'mid')]  want=[['suspicious', 'skeptical'], ['suspicious', 'skeptical', 'confusion']]
+  XX mm22 got=[('delight', 'mid'), ('attentive', 'mid')]  want=[['delight', 'happy', 'proud'], ['sad', 'crying']]
+  OK mm23 got=[('attentive', 'mid'), ('delight', 'mid')]  want=[['attentive', 'listening', 'rest'], ['delight', 'happy', 'proud']]
+  OK mm24 got=[('angry', 'mid'), ('curious', 'mid')]  want=[['angry', 'stern', 'bored'], ['curious', 'attentive', 'listening']]
+  OK mm25 got=[('surprised', 'mid'), ('curious', 'mid')]  want=[['surprised', 'startled', 'oh'], ['curious', 'worried']]
+  XX mm26 got=[('worried', 'mid'), ('tender', 'mid')]  want=[['worried', 'fret', 'dread'], ['worried', 'fret', 'dread'], ['worried', 'fret', 'dread']]
+  OK mm27 got=[('surprised', 'intense'), ('delight', 'mid')]  want=[['surprised', 'delight'], ['delight', 'happy', 'proud']]
+  OK mm28 got=[('sad', 'mid'), ('attentive', 'mid')]  want=[['sad', 'crying'], ['attentive', 'listening', 'rest']]
+  paragraphs beats-exact-in-order 21/28 (75%); allowing merges 23/28; with all levels right 20/28; positional beats right 51/60
+
+read(): mean 10076.9 us  max 204855.1 us

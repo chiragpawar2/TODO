@@ -1,0 +1,25 @@
+  m01 whole=sad/mid('miss everyone') per=['delight', 'sad'] 2/2
+  m02 whole=apologetic/mid('sorry') per=['apologetic', 'tender'] 2/2
+  m03 whole=content/mid('thank god') per=['worried', 'content'] 2/2
+  m04 whole=grin/mid('haha*') per=['grin', 'crying'] 2/2
+  m05 whole=angry/mid('furious') per=['angry', 'searching'] 2/2
+  m06 whole=happy/mid('happy') per=['happy', 'sad'] 2/2
+  m07 whole=angry/mid('fed up') per=['fret', 'angry', 'curious'] 3/3
+  m08 whole=tender/mid('touched') per=['surprised', 'tender'] 2/2
+  m09 whole=happy/mid('happy') per=['drowsy', 'happy'] 2/2
+  m10 whole=content/mid('thankfully') per=['dread', 'content', 'worried'] 3/3
+  m11 whole=bored/mid('bored') per=['bored', 'curious'] 2/2
+  m12 whole=sad/mid('failed') per=['sad', 'shy', 'content'] 3/3
+  m13 whole=worried/mid('hospital') per=['worried', 'worried', 'attentive'] 3/3
+  m14 whole=delight/mid('we won') per=['delight', 'suspicious'] 2/2
+  m15 whole=love/mid('i love you') per=['love', 'stern'] 2/2
+  m16 whole=apologetic/mid('sorry') per=['apologetic', 'fret'] 2/2
+  m17 whole=delight/mid('great news') per=['delight', 'worried'] 2/2
+  m18 whole=oh/mid('i see') per=['confusion', 'oh', 'content'] 3/3
+  m19 whole=crying/mid('cry') per=['grin', 'crying'] 2/2
+  m20 whole=content/mid('no rush') per=['listening', 'content'] 2/2
+  m21 whole=tender/mid('proud of you') per=['tender', 'drowsy'] 2/2
+  m22 whole=angry/mid('angry') per=['alarmed', 'angry'] 2/2
+  m23 whole=suspicious/mid('are you sure') per=['suspicious', 'skeptical', 'attentive'] 3/3
+  m24 whole=sad/mid('hurt') per=['delight', 'sad'] 2/2
+  m25 whole=content/mid('phew') per=['worried', 'happy', 'content'] 2/2
