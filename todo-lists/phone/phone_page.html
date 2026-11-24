@@ -122,7 +122,8 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
 .mic{position:absolute;z-index:24;left:50%;bottom:30px;transform:translate(-50%,90px);transition:transform .25s;display:flex;align-items:center;gap:12px;
   min-height:46px;padding:8px 18px;box-sizing:border-box;border-radius:23px;background:var(--s2);border:1px solid var(--hl);
   font-size:18px;font-weight:500;line-height:1.3;max-width:calc(var(--sw) - 260px);overflow:hidden}
-.mic.on{transform:translate(-50%,0)}
+.mic{opacity:0;visibility:hidden;transition:transform .25s,opacity .2s,visibility 0s .25s}
+.mic.on{transform:translate(-50%,0);opacity:1;visibility:visible;transition:transform .25s,opacity .2s}
 .mic .dot{width:10px;height:10px;border-radius:50%;background:var(--danger);flex:none}
 .mic span:last-child{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
