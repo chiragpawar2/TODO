@@ -15,13 +15,13 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
 #stage .inner{position:relative;width:100%;height:100%}
 .screen{
   --s0:#080a0e; --s1:#121419; --s2:#1a1d24; --hl:#272b34; --t1:#f3f5f8; --t2:#9aa3b2; --t3:#646c7a;
-  --acc:#5b8def; --acc-ink:#ffffff; --ok:#5b8def; --danger:#ff6b6b; --sw:800px;
+  --acc:#5b8def; --acc-ink:#ffffff; --ok:#5b8def; --danger:#ff6b6b; --sw:800px; --sh:480px;
   position:absolute;left:50%;top:50%;width:800px;height:480px;transform:translate(-50%,-50%);transform-origin:center;
   background:var(--s0);overflow:hidden;contain:strict;
   font-family:var(--font);color:var(--t1);font-feature-settings:"tnum" 1;-webkit-font-smoothing:antialiased}
 
 /* the face: centred at home, a live face button in the top-right otherwise */
-#facebox{position:absolute;z-index:5;left:calc((var(--sw) - 800px) / 2);top:0;width:800px;height:480px;border-radius:0;overflow:hidden;
+#facebox{position:absolute;z-index:5;left:calc((var(--sw) - 800px) / 2);top:calc((var(--sh) - 480px) / 2);width:800px;height:480px;border-radius:0;overflow:hidden;
   transition:left .38s cubic-bezier(.2,.8,.2,1),top .38s cubic-bezier(.2,.8,.2,1),width .38s cubic-bezier(.2,.8,.2,1),height .38s cubic-bezier(.2,.8,.2,1),border-radius .38s}
 #facebox canvas{width:100%;height:100%;display:block;will-change:transform}
 #facebox::after{content:"";position:absolute;inset:0;pointer-events:none;
@@ -193,11 +193,20 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
 .pitem .btn{height:42px;font-size:15px;padding:0 12px}
 .mtrack i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
 
-/* held upright: ask for landscape */
-#rotate{display:none;position:fixed;inset:0;z-index:100;background:#080a0e;color:#f3f5f8;flex-direction:column;align-items:center;justify-content:center;gap:18px;
-  font:600 19px var(--font);text-align:center;padding:24px}
-#rotate svg{width:72px;height:72px;color:rgba(243,245,248,.75)}
-@media (orientation:portrait) and (max-width:900px){#rotate{display:flex}}
+/* held upright: the screen grows taller instead of asking to rotate; the
+   face stays centred and the controls get bigger so they stay easy to tap */
+.screen.portrait .listbtn,.screen.portrait .msgbtn{width:64px;height:64px;border-radius:20px;top:20px}
+.screen.portrait .listbtn{right:20px}
+.screen.portrait .msgbtn{right:98px}
+.screen.portrait .listbtn svg,.screen.portrait .msgbtn svg{width:32px;height:32px}
+.screen.portrait #micbtn{width:88px;height:88px;right:22px;bottom:22px}
+.screen.portrait #micbtn svg{width:36px;height:36px}
+.screen.portrait #gear{width:60px;height:60px;left:24px;bottom:36px}
+.screen.portrait #gear svg{width:30px;height:30px}
+.screen.portrait .caption{font-size:24px;bottom:130px;padding:0 32px}
+.screen.portrait .mic{font-size:21px;bottom:130px;max-width:calc(var(--sw) - 48px)}
+.screen.portrait.ui #micbtn{width:72px;height:72px;right:18px;bottom:18px}
+.screen.portrait .bar .name{font-size:22px}
 @media (prefers-reduced-motion:reduce){#facebox,.mic,.track i{transition:none}#micbtn.on::before{animation:none}}
 </style>
 
@@ -256,18 +265,23 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
     </div>
   </div>
 </div></div>
-<div id="rotate" role="alert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M3 9a9 9 0 0 1 4-5M21 15a9 9 0 0 1-4 5"/></svg>Turn your phone sideways to talk to TODO</div>
 <!--FACE_AND_READER-->
 <script>
 (function(){
 "use strict";
-// Fit any phone held sideways: keep 480 px of height, widen the screen to the
-// phone's own shape, then scale it to fill the space inside the safe areas.
+// Fit the phone either way up. Sideways: 480 px tall, as wide as the phone's
+// shape. Upright: 800 px wide, as tall as the phone's shape. Then scale it to
+// fill everything inside the safe areas - no rotating needed.
 const stageEl=document.querySelector("#stage .inner"), screenEl=document.getElementById("screen");
 function fit(){
   const w=stageEl.clientWidth, h=stageEl.clientHeight; if(!w||!h) return;
-  const W=Math.max(800,Math.round(480*w/h)), k=Math.min(w/W,h/480);
-  screenEl.style.width=W+"px"; screenEl.style.setProperty("--sw",W+"px");
+  const upright=h>w;
+  // Upright uses a 560 px wide screen so text stays readable on a phone; the
+  // face still fits because the eyes and mouth use only the middle of its canvas.
+  const W=upright?560:Math.max(800,Math.round(480*w/h)), H=upright?Math.max(480,Math.round(560*h/w)):480, k=Math.min(w/W,h/H);
+  screenEl.style.width=W+"px"; screenEl.style.height=H+"px";
+  screenEl.style.setProperty("--sw",W+"px"); screenEl.style.setProperty("--sh",H+"px");
+  screenEl.classList.toggle("portrait",upright);
   screenEl.style.transform="translate(-50%,-50%) scale("+k+")";
 }
 new ResizeObserver(fit).observe(stageEl); addEventListener("orientationchange",()=>setTimeout(fit,250)); fit();
@@ -1072,7 +1086,7 @@ function talkUI(on){ listening=on; $("#micbtn").classList.toggle("on",on); $("#m
   $("#mic").classList.toggle("on",on); $("#screen").classList.toggle("listening",on); }
 function armSilence(ms){ clearTimeout(silenceT); silenceT=setTimeout(finishTurn,ms); }
 function finishTurn(){ clearTimeout(silenceT); endTurn=true; try{ rec&&rec.stop(); }catch(e){} }
-function goFull(){ try{ const d=document.documentElement; if(!document.fullscreenElement&&d.requestFullscreen) d.requestFullscreen().then(()=>{ try{ screen.orientation.lock("landscape").catch(()=>{}); }catch(e){} }).catch(()=>{}); }catch(e){} }
+function goFull(){ try{ const d=document.documentElement; if(!document.fullscreenElement&&d.requestFullscreen) d.requestFullscreen().catch(()=>{}); }catch(e){} }
 async function talk(){
   audioCtx(); goFull();
   if(live.on){ liveStop(); return; }
