@@ -28,6 +28,9 @@ FACE = os.path.join(ROOT, "todo-character", "prototypes", "homebot-face.html")
 DOCS = os.path.join(ROOT, "docs")
 MODEL_SRC = os.path.join(ROOT, "todo-character", "models", "go-emotions", "onnx")
 MODEL_OUT = os.path.join(DOCS, "models", "go-emotions")
+VOICE_SRC = os.path.join(ROOT, "todo-character", "models", "speaker", "campplus.onnx")
+VOICE_OUT = os.path.join(DOCS, "models", "speaker")
+VOICE_WORKER = os.path.join(HERE, "voice_worker.mjs")
 PARTS = 2   # GitHub refuses single files over 100 MB; 2 parts are ~60 MB each
 
 
@@ -133,6 +136,23 @@ def emotion_model() -> None:
               open(os.path.join(MODEL_OUT, "manifest.json"), "w"), indent=2)
 
 
+def voice_model() -> None:
+    """Host the CAM++ speaker model (3D-Speaker, zh/en, 16 kHz, 192-d) for voice recognition.
+
+    One 28 MB file from the sherpa-onnx speaker-recognition release, SHA-256
+    53cab20b... as published there. The phone checks the hash after download.
+    """
+    if not os.path.isfile(VOICE_SRC):
+        print("speaker model not found at", VOICE_SRC, "- voice recognition will not be offered")
+        return
+    os.makedirs(VOICE_OUT, exist_ok=True)
+    blob = open(VOICE_SRC, "rb").read()
+    open(os.path.join(VOICE_OUT, "campplus.onnx"), "wb").write(blob)
+    json.dump({"name": "CAM++ speaker (3D-Speaker zh/en)", "file": "campplus.onnx", "size": len(blob),
+               "sha256": hashlib.sha256(blob).hexdigest(), "dim": 192},
+              open(os.path.join(VOICE_OUT, "manifest.json"), "w"), indent=2)
+
+
 def check(html: str) -> None:
     """Refuse to ship a page whose code does not parse.
 
@@ -148,6 +168,9 @@ def check(html: str) -> None:
     jobs = [("page", ".js", js)]
     if m:
         jobs.append(("model worker", ".mjs", json.loads(m.group(1))))
+    v = re.search(r'const VOICE_WORKER=(".*?");\n', js, re.S)
+    if v:
+        jobs.append(("voice worker", ".mjs", json.loads(v.group(1))))
     for name, ext, code in jobs:
         with tempfile.NamedTemporaryFile("w", suffix=ext, delete=False, encoding="utf-8") as f:
             f.write(code)
@@ -163,6 +186,9 @@ def main() -> None:
     page = io.open(os.path.join(HERE, "phone_page.html"), encoding="utf-8").read()
     assert page.count("<!--FACE_AND_READER-->") == 1
     page = page.replace("<!--FACE_AND_READER-->", face_and_reader())
+    assert page.count('const VOICE_WORKER=/*VOICE_WORKER*/"";') == 1
+    page = page.replace('const VOICE_WORKER=/*VOICE_WORKER*/"";',
+                        "const VOICE_WORKER=" + json.dumps(io.open(VOICE_WORKER, encoding="utf-8").read()) + ";")
     html = HEAD + page + "\n</body>\n</html>\n"
     check(html)
     io.open(os.path.join(DOCS, "index.html"), "w", encoding="utf-8").write(html)
@@ -176,6 +202,7 @@ def main() -> None:
     io.open(os.path.join(DOCS, ".nojekyll"), "w").close()
     icons()
     emotion_model()
+    voice_model()
     print("built", DOCS)
 
 

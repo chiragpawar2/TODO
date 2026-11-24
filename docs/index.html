@@ -198,6 +198,10 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
 .mrow{display:flex;align-items:center;gap:12px;height:52px}
 .mrow .mtrack{flex:1}
 .mrow .btn[hidden]{display:none}
+.vrow{display:flex;align-items:center;gap:12px;height:52px}
+.vrow .mtrack{flex:1}
+.vrow .btn[hidden]{display:none}
+.vlabel{font-weight:600;white-space:nowrap}.vlabel small{display:block;font-weight:400;opacity:.6;font-size:13px}
 .keystate{font-size:14.5px;color:var(--t2)}
 .keystate.ok{color:#5fd39a}
 .mtrack{height:8px;border-radius:4px;background:var(--s2);overflow:hidden}
@@ -272,7 +276,9 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
         </div>
         <section class="people">
           <h3>People</h3>
-          <p class="hint">Who TODO knows, so messages reach the right person. A voice sample is saved on this phone, ready for recognising voices later.</p>
+          <p class="hint">Who TODO knows, so messages reach the right person. With voice recognition on, TODO knows who is talking from their voice sample. Everything stays on this phone.</p>
+          <div class="vrow"><span class="vlabel">Voice recognition <small>About 28 MB</small></span><div class="mtrack" aria-hidden="true"><i id="vbar"></i></div><button class="btn primary" id="vload" type="button">Download</button></div>
+          <div class="srow"><span class="keystate" id="vstate">Not downloaded.</span><button class="link" id="vforget" type="button" hidden>Remove</button></div>
           <div id="peoplelist"></div>
           <form class="prow" id="personform">
             <input class="field" id="pname" autocomplete="off" placeholder="Name" aria-label="Name">
@@ -2114,9 +2120,9 @@ function turnRollback(){ if(turn.snap!==null){ const o=JSON.parse(turn.snap); ms
 /* Who is speaking is tracked here, not taken on trust: set by set_speaker, gone after
    5 minutes without a turn, when a Live session ends, or when set_speaker is called again. */
 const SPEAKER_IDLE_MS=5*60e3;
-const speaker={p:null,raw:"",at:0};
+const speaker={p:null,raw:"",at:0,byVoice:false};
 function speakerTouch(){ if(speaker.at&&Date.now()-speaker.at>SPEAKER_IDLE_MS){ speaker.p=null; speaker.raw=""; } speaker.at=Date.now(); }
-function speakerReset(){ speaker.p=null; speaker.raw=""; speaker.at=0; }
+function speakerReset(){ speaker.p=null; speaker.raw=""; speaker.at=0; speaker.byVoice=false; voice.p=null; voice.score=0; }
 // short key parts of a message, so a delivery can be checked for dropped details
 const msgChecklist=t=>String(t||"").split(/\s*(?:,|;|،|\band\b|\baur\b|\bani\b|आणि|और|तसेच|\.(?=\s))\s*/i).map(x=>x.trim().replace(/[.।!]+$/,"")).filter(x=>x.length>1);
 function turnCommit(){ const t=Date.now();
@@ -2131,7 +2137,7 @@ const MSG_TOOLS=[
     message:{type:"STRING",description:"Exactly what should be passed on, every detail, in the sender's own language and words"},
     until:{type:"STRING",description:"When it stops mattering, in the sender's words or as a time: 12:00, 5pm, this morning (until 12:00), afternoon (17:00), evening (21:00), today or tonight (23:59), tomorrow (end of tomorrow). Use this whenever the sender says when."},
     valid_hours:{type:"NUMBER",description:"Only if no end time was said: how many hours to keep it if not delivered. Default 24."}},required:["to","message"]}},
-  {name:"get_messages",description:"Get messages waiting for the person who is speaking now, plus ones delivered in the last 3 hours (so they can be repeated or translated). Only ever for the speaker, never for someone else even if they offer to pass it on.",parameters:{type:"OBJECT",properties:{for:{type:"STRING",description:"Name or role of the person speaking now, e.g. Sunita or the cook"}},required:["for"]}},
+  {name:"get_messages",description:"Get messages waiting for the person who is speaking now, plus ones delivered in the last 3 hours (so they can be repeated or translated). Only ever for the speaker, never for someone else even if they offer to pass it on.",parameters:{type:"OBJECT",properties:{for:{type:"STRING",description:"Name or role of the person speaking now, e.g. Sunita or the cook. Leave it out if they have not said: TODO may know them by voice."}}}},
   {name:"mark_delivered",description:"Mark messages as delivered once you say them, in this same reply, to the person they are for.",parameters:{type:"OBJECT",properties:{ids:{type:"ARRAY",items:{type:"NUMBER"}}},required:["ids"]}},
   {name:"delete_message",description:"Cancel a message. Only its sender may cancel or change it (to change: delete, then leave the new one).",parameters:{type:"OBJECT",properties:{id:{type:"NUMBER"},asked_by:{type:"STRING",description:"Name of the person speaking now"}},required:["id"]}},
   {name:"list_messages",description:"Which messages are kept: who for, who from, delivered or not. The text is included only for messages the asker sent or receives.",parameters:{type:"OBJECT",properties:{asked_by:{type:"STRING",description:"Name of the person speaking now"}}}},
@@ -2145,7 +2151,10 @@ function runMsgTool(name,a){
   if(name==="set_speaker"){ const nm=String(a.name||"").trim(); speaker.p=null; speaker.raw=""; speaker.at=Date.now();
     if(!nm||PLACEHOLDER_FROM.test(pnorm(nm))) return {ok:false,error:"missing_name",hint:"Ask the person their name."};
     const r=resolvePeople(nm);
-    if(r.people.length===1){ speaker.p=r.people[0]; speaker.raw=nm; return {ok:true,speaker:{name:speaker.p.name,role:speaker.p.role}}; }
+    if(r.people.length===1){ const q=r.people[0];
+      if(voice.p&&voice.p.id!==q.id&&q.vp){ speaker.p=voice.p; speaker.raw=voice.p.name; speaker.byVoice=true;
+        return {ok:false,error:"voice_does_not_match",speaker:{name:voice.p.name},hint:"The voice sounds like "+voice.p.name+", not "+q.name+". Say so kindly and ask them to confirm; "+q.name+"'s messages can't be read now."}; }
+      speaker.p=q; speaker.raw=nm; speaker.byVoice=false; return {ok:true,speaker:{name:q.name,role:q.role}}; }
     speaker.raw=nm;
     if(r.people.length>1) return {ok:false,error:"ambiguous_person",candidates:r.people.map(p=>({name:p.name,role:p.role})),hint:"Ask which of them they are, then call set_speaker with the name."};
     return {ok:true,speaker:{name:nm},known:false,hint:"Not someone I know yet; they may still leave messages. Only messages left for this exact name can be read to them."}; }
@@ -2172,7 +2181,9 @@ function runMsgTool(name,a){
     return res;
   }
   if(name==="get_messages"){
-    const who=String(a.for||"").trim()||(speaker.p?speaker.p.name:speaker.raw);
+    voiceToSpeaker();
+    let who=String(a.for||"").trim();
+    if(!who||PLACEHOLDER_FROM.test(pnorm(who))) who=speaker.p?speaker.p.name:speaker.raw;
     if(!speaker.p&&!speaker.raw) return {ok:false,error:"who_is_speaking_unknown",hint:"Nothing read out. Ask the person their name, call set_speaker with it, then get_messages."};
     const r=resolvePeople(who);
     if(r.people.length>1) return {ok:false,error:"ambiguous_person",candidates:r.people.map(p=>({name:p.name,role:p.role})),hint:"Ask the speaker their name, then call set_speaker."};
@@ -2183,7 +2194,7 @@ function runMsgTool(name,a){
     const faded=(msgs.faded||[]).filter(f=>p?(f.to_id?f.to_id===p.id:samePerson(f.to,p.name)):samePerson(f.to,who));
     if(mine.length) showMsgChange();
     turn.fetched.push(...mine.filter(m=>!m.delivered_at).map(m=>m.id));
-    const res={ok:true,for:p?p.name:who,messages:mine.map(m=>({...msgView(m),checklist:msgChecklist(m.text)}))};
+    const res={ok:true,for:p?p.name:who,recognised_by_voice:!!speaker.byVoice,messages:mine.map(m=>({...msgView(m),checklist:msgChecklist(m.text)}))};
     if(faded.length) res.faded_earlier=faded.map(f=>({from:f.from,delivered_at:clock(f.delivered_at),faded_at:clock(f.faded_at)}));
     res.hint=mine.length?"These are only for "+(p?p.name:who)+", the person speaking. Say each one faithfully, every item in its checklist, nothing dropped, translated fully into the language and script of the person's latest message (English to English). Call mark_delivered with the ids of the ones you say. If they ask again or want another language, repeat it."
       :faded.length?"Nothing is waiting now. A message was delivered earlier and has since faded; say that, do not say there was never a message."
@@ -2216,12 +2227,83 @@ const MSG_RULES="You also pass messages between the people of the house, includi
   "When someone asks you to tell, remind or pass something on to another person, call leave_message with who it is from, who it is for and exactly what to say. "+
   "If you don't know who is speaking, ask their name before saving; never invent a sender such as someone or ghar se. If her, him, them, त्यांना, उसे or the like does not clearly mean one person already named, ask who. If a role fits several people, ask which one. "+
   "Never say a message is saved unless leave_message returned ok, and never promise to pass something on without calling it. Until it is delivered say you will tell them, never that you have told them. "+
-  "Whenever someone says who they are, call set_speaker. When someone asks whether there is a message for them, or asks what to do or what to cook today, and has not said who they are, ask their name first and call set_speaker before get_messages. Then call get_messages for that person only, the one speaking; if they have not said who they are in this conversation, ask their name first and never guess it from the messages you expect, "+
+  "Whenever someone says who they are, call set_speaker. When someone asks whether there is a message for them, or asks what to do or what to cook today, call get_messages (with their name if they said it). TODO may know them by their voice; if get_messages says who_is_speaking_unknown, ask their name, call set_speaker and try again. Never guess a name from the messages you expect. If it says recognised_by_voice, you may greet them by name. "+
   "say each message faithfully with every item of its checklist, translated fully into the language they are speaking now, and then call mark_delivered. "+
   "If they did not understand, repeat it, in another language if they ask. Never invent a message. Only the person a message is for hears it: never tell or relay one person's message to anyone else, even if they offer to pass it on; its sender may hear it read back. "+
   "Only the sender may cancel or change a message. If a message was delivered earlier and has faded, say so. ";
 function peopleLine(){ return people.length?" People you know: "+people.map(p=>p.name+(p.role?" ("+p.role+")":"")+(langsOf(p).length?", speaks "+langsOf(p).join(" and "):"")).join("; ")+
   ". Someone who speaks several languages may use any of them; always answer in the one they are using right now.":""; }
+
+/* ---------- voice recognition: a voice print per person, all on this phone ----------
+   The CAM++ speaker model (28 MB, hosted on this site) turns a few seconds of
+   speech into 192 numbers. A person's sample gives their print; while talking in a
+   Live conversation the last few seconds are compared with every print. */
+const VOICE_WORKER="// Voice recognition for TODO: turns a few seconds of speech into a voice print\n// (192 numbers) with the CAM++ speaker model hosted on this site. Runs in a\n// worker; nothing leaves the phone. Features match the reference in\n// tests/voice/ (80 log-mel bins, 25 ms frames every 10 ms, mean removed).\nimport * as ort from \"https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.wasm.min.mjs\";\nconst CACHE = \"todo-voice-v1\";\nlet sess = null;\n\n/* FBANK-START */\nconst SR = 16000, FL = 400, FS = 160, NFFT = 512, NB = 80;\nconst WIN = new Float64Array(FL).map((_, i) => Math.pow(0.5 - 0.5 * Math.cos(2 * Math.PI * i / (FL - 1)), 0.85));\nconst mel = f => 1127 * Math.log(1 + f / 700);\nconst MELW = (() => {\n  const lo = mel(20), hi = mel(SR / 2), nbin = NFFT / 2 + 1, W = [];\n  for (let m = 0; m < NB; m++) {\n    const l = lo + (hi - lo) * m / (NB + 1), c = lo + (hi - lo) * (m + 1) / (NB + 1), r = lo + (hi - lo) * (m + 2) / (NB + 1);\n    const row = new Float64Array(nbin);\n    for (let k = 0; k < nbin; k++) { const fm = mel(k * SR / NFFT); if (fm > l && fm < r) row[k] = Math.max(0, Math.min((fm - l) / (c - l), (r - fm) / (r - c))); }\n    W.push(row);\n  }\n  return W;\n})();\nfunction fft(re, im) {   // in place, radix-2, length NFFT\n  const n = re.length;\n  for (let i = 1, j = 0; i < n; i++) { let b = n >> 1; for (; j & b; b >>= 1) j ^= b; j ^= b; if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; } }\n  for (let len = 2; len <= n; len <<= 1) {\n    const a = -2 * Math.PI / len, wr = Math.cos(a), wi = Math.sin(a);\n    for (let i = 0; i < n; i += len) { let cr = 1, ci = 0;\n      for (let k = 0; k < len / 2; k++) {\n        const ur = re[i + k], ui = im[i + k], j = i + k + len / 2;\n        const vr = re[j] * cr - im[j] * ci, vi = re[j] * ci + im[j] * cr;\n        re[i + k] = ur + vr; im[i + k] = ui + vi; re[j] = ur - vr; im[j] = ui - vi;\n        const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t; } }\n  }\n}\nfunction fbank(x) {   // x: Float32Array of 16 kHz samples in -1..1\n  const n = x.length < FL ? 0 : 1 + Math.floor((x.length - FL) / FS), out = new Float32Array(n * NB);\n  const re = new Float64Array(NFFT), im = new Float64Array(NFFT), f = new Float64Array(FL);\n  for (let i = 0; i < n; i++) {\n    let mean = 0; for (let k = 0; k < FL; k++) { f[k] = x[i * FS + k]; mean += f[k]; } mean /= FL;\n    for (let k = 0; k < FL; k++) f[k] -= mean;\n    re.fill(0); im.fill(0);\n    re[0] = (f[0] - 0.97 * f[0]) * WIN[0];\n    for (let k = 1; k < FL; k++) re[k] = (f[k] - 0.97 * f[k - 1]) * WIN[k];\n    fft(re, im);\n    for (let m = 0; m < NB; m++) { const w = MELW[m]; let s = 0;\n      for (let k = 0; k <= NFFT / 2; k++) if (w[k]) s += w[k] * (re[k] * re[k] + im[k] * im[k]);\n      out[i * NB + m] = Math.log(Math.max(s, 1.1920929e-07)); }\n  }\n  for (let m = 0; m < NB; m++) { let s = 0; for (let i = 0; i < n; i++) s += out[i * NB + m]; s /= n || 1; for (let i = 0; i < n; i++) out[i * NB + m] -= s; }\n  return { feats: out, frames: n };\n}\n/* FBANK-END */\n\nasync function download(url, size, onBytes) {\n  const c = await caches.open(CACHE), hit = await c.match(url);\n  if (hit) { const b = new Uint8Array(await hit.arrayBuffer()); onBytes(b.length); return b; }\n  const res = await fetch(url); if (!res.ok) throw new Error(\"download failed (\" + res.status + \")\");\n  const rd = res.body.getReader(), buf = new Uint8Array(size); let off = 0;\n  for (;;) { const { done, value } = await rd.read(); if (done) break; buf.set(value, off); off += value.length; onBytes(off); }\n  if (off !== size) throw new Error(\"the download was cut short\");\n  await c.put(url, new Response(buf)); return buf;\n}\nself.onmessage = async e => {\n  const m = e.data;\n  if (m.type === \"load\") {\n    try {\n      const man = await (await fetch(m.base + \"manifest.json\", { cache: \"no-cache\" })).json();\n      const all = await download(m.base + man.file, man.size, n => self.postMessage({ type: \"progress\", loaded: n, total: man.size }));\n      self.postMessage({ type: \"stage\", text: \"Checking\u2026\" });\n      const h = Array.from(new Uint8Array(await crypto.subtle.digest(\"SHA-256\", all))).map(x => x.toString(16).padStart(2, \"0\")).join(\"\");\n      if (h !== man.sha256) { await caches.delete(CACHE); throw new Error(\"the download was damaged. Tap Download to try again\"); }\n      self.postMessage({ type: \"stage\", text: \"Starting\u2026\" });\n      ort.env.wasm.wasmPaths = \"https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/\"; ort.env.wasm.numThreads = 1;\n      sess = await ort.InferenceSession.create(all.buffer, { executionProviders: [\"wasm\"] });\n      self.postMessage({ type: \"ready\" });\n    } catch (err) { self.postMessage({ type: \"error\", text: String(err && err.message || err) }); }\n  }\n  if (m.type === \"embed\") {   // m.pcm: Float32Array, 16 kHz\n    try {\n      if (!sess) throw new Error(\"not loaded\");\n      const { feats, frames } = fbank(m.pcm);\n      if (frames < 100) throw new Error(\"too short\");\n      const out = await sess.run({ x: new ort.Tensor(\"float32\", feats, [1, frames, NB]) });\n      const v = Array.from(out[sess.outputNames[0]].data), nrm = Math.hypot(...v) || 1;\n      self.postMessage({ type: \"embedding\", id: m.id, emb: v.map(x => x / nrm) });\n    } catch (err) { self.postMessage({ type: \"embedding\", id: m.id, emb: null, error: String(err && err.message || err) }); }\n  }\n  if (m.type === \"forget\") { try { await caches.delete(CACHE); } catch (e) {} self.postMessage({ type: \"forgotten\" }); }\n};\n";
+const V_BASE=typeof location!=="undefined"?new URL("models/speaker/",location.href).href:"";
+const V_MATCH=0.55, V_MARGIN=0.08, V_MIN_S=2.0, V_MAX_S=8;
+const voice={p:null,score:0,at:0};
+let vw=null, vReady=false, vBusy=false, vSeq=0; const vWait=new Map();
+function vUI(state,text,frac){ $("#vstate").textContent=text; $("#vstate").className="keystate"+(state==="ready"?" ok":"");
+  if(frac!=null) $("#vbar").style.width=Math.round(frac*100)+"%";
+  $("#vload").hidden=state==="ready"; $("#vload").disabled=state==="busy"; $("#vload").textContent=state==="error"?"Try again":"Download";
+  $("#vforget").hidden=state!=="ready"; }
+function vStart(){
+  if(vBusy||vReady) return;
+  if(!("caches" in window)||!window.Worker||!window.crypto||!crypto.subtle){ vUI("error","This browser can't run voice recognition.",0); return; }
+  vBusy=true; vUI("busy","Preparing…",0);
+  try{ vw=new Worker(URL.createObjectURL(new Blob([VOICE_WORKER],{type:"text/javascript"})),{type:"module"}); }
+  catch(e){ vBusy=false; vUI("error","This browser can't run voice recognition.",0); return; }
+  vw.onmessage=e=>{ const m=e.data;
+    if(m.type==="progress") vUI("busy",`Downloading ${mb(m.loaded)} of ${mb(m.total)} MB`,m.loaded/m.total);
+    if(m.type==="stage") vUI("busy",m.text,1);
+    if(m.type==="ready"){ vReady=true; vBusy=false; vUI("ready","Ready. TODO knows people by their voice sample.",1); enrolMissing(); }
+    if(m.type==="error"){ vBusy=false; vw.terminate(); vw=null; vUI("error","Couldn't load: "+m.text,0); }
+    if(m.type==="forgotten"){ vw.terminate(); vw=null; vReady=false; vUI("idle","Removed from this phone.",0); }
+    if(m.type==="embedding"){ const f=vWait.get(m.id); if(f){ vWait.delete(m.id); f(m.emb); } } };
+  vw.postMessage({type:"load",base:V_BASE});
+}
+function vEmbed(pcm){ if(!vReady) return Promise.resolve(null); const id=++vSeq;
+  return new Promise(r=>{ vWait.set(id,r); vw.postMessage({type:"embed",id,pcm},[pcm.buffer]); setTimeout(()=>{ if(vWait.has(id)){ vWait.delete(id); r(null); } },6000); }); }
+const vdot=(a,b)=>{ let s=0; for(let i=0;i<a.length;i++) s+=a[i]*b[i]; return s; };
+function vMatch(emb){ const sc=people.filter(p=>p.vp).map(p=>({p,s:vdot(emb,p.vp)})).sort((a,b)=>b.s-a.s);
+  if(!sc.length) return {p:null,score:0};
+  const best=sc[0], second=sc[1]?sc[1].s:-1;
+  return best.s>=V_MATCH&&best.s-second>=V_MARGIN?{p:best.p,score:best.s}:{p:null,score:best.s}; }
+// A sample is turned into 16 kHz the same way the live mic is, so both sound alike to the model.
+async function blobTo16k(blob){ const ac=audioCtx(), buf=await ac.decodeAudioData(await blob.arrayBuffer());
+  const ch=buf.getChannelData(0), ratio=buf.sampleRate/16000, out=[]; let acc=0;
+  for(let i=0;i<ch.length;i++){ acc+=1; if(acc>=ratio){ acc-=ratio; out.push(Math.max(-1,Math.min(1,ch[i]))); } }
+  return trimSilence(Float32Array.from(out)); }
+function trimSilence(x){ const keep=[]; for(let i=0;i+1600<=x.length;i+=1600){ let e=0; for(let k=i;k<i+1600;k++) e+=x[k]*x[k]; if(Math.sqrt(e/1600)>0.008) keep.push(x.subarray(i,i+1600)); }
+  const o=new Float32Array(keep.length*1600); keep.forEach((c,i)=>o.set(c,i*1600)); return o; }
+async function enrol(p){ if(!vReady) return false; const b=await vget(p.id); if(!b) return false;
+  try{ const pcm=await blobTo16k(b); if(pcm.length<16000*1.5) return false; const emb=await vEmbed(pcm); if(!emb) return false;
+    p.vp=emb.map(x=>+x.toFixed(5)); savePeople(); renderPeople(); return true; }catch(e){ return false; } }
+async function enrolMissing(){ for(const p of people) if(p.voice&&!p.vp) await enrol(p); }
+// While someone talks in a Live conversation: keep their last few seconds of speech, not TODO's.
+const vbuf={chunks:[],n:0,sinceRun:0,pending:null};
+function vHear(i16){ if(!vReady||!people.some(p=>p.vp)) return;
+  if(live.sources.length) return;   // TODO is talking; his own voice is not a person
+  const f=new Float32Array(i16.length); let e=0; for(let i=0;i<i16.length;i++){ f[i]=i16[i]/32768; e+=f[i]*f[i]; }
+  if(Math.sqrt(e/f.length)<0.008) return;   // silence
+  vbuf.chunks.push(f); vbuf.n+=f.length; vbuf.sinceRun+=f.length;
+  while(vbuf.n-vbuf.chunks[0].length>=16000*V_MAX_S){ vbuf.n-=vbuf.chunks.shift().length; }
+  if(vbuf.n>=16000*V_MIN_S&&vbuf.sinceRun>=16000*1.5&&!vbuf.pending) vRun(); }
+function vRun(){ const all=new Float32Array(vbuf.n); let o=0; for(const c of vbuf.chunks){ all.set(c,o); o+=c.length; }
+  vbuf.sinceRun=0;
+  vbuf.pending=vEmbed(all).then(emb=>{ vbuf.pending=null; if(!emb) return;
+    const r=vMatch(emb); voice.p=r.p; voice.score=r.score; voice.at=Date.now();
+    if(r.p) log("bot","(voice: "+r.p.name+" "+r.score.toFixed(2)+")"); }); return vbuf.pending; }
+function vTurnEnd(){ vbuf.chunks=[]; vbuf.n=0; vbuf.sinceRun=0; }
+// Before tools run: finish any voice check in flight, then let a clear voice match name the speaker.
+async function vSettle(){ if(vbuf.pending) await Promise.race([vbuf.pending,new Promise(r=>setTimeout(r,1500))]);
+  else if(vReady&&vbuf.n>=16000*V_MIN_S&&vbuf.sinceRun>0) await Promise.race([vRun(),new Promise(r=>setTimeout(r,1500))]); }
+// The voice wins over an earlier name: whoever is talking now is the one heard.
+function voiceToSpeaker(){ if(!voice.p||Date.now()-voice.at>60e3) return;
+  if(!speaker.p||speaker.p.id!==voice.p.id){ speaker.p=voice.p; speaker.raw=voice.p.name; speaker.byVoice=true; } speaker.at=Date.now(); }
+$("#vload").onclick=vStart;
+$("#vforget").onclick=()=>{ if(vw) vw.postMessage({type:"forget"}); };
+(async()=>{ try{ const c=await caches.open("todo-voice-v1"); if((await c.keys()).length>=1) vStart(); }catch(e){} })();
 
 /* ---------- people in settings, with a voice sample kept on the phone ---------- */
 function vdb(){ return new Promise((res,rej)=>{ const r=indexedDB.open("todo-voices",1); r.onupgradeneeded=()=>r.result.createObjectStore("v"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
@@ -2237,8 +2319,9 @@ async function recordVoice(p){
   const rec=new MediaRecorder(stream), parts=[]; recording=rec;
   rec.ondataavailable=e=>{ if(e.data.size) parts.push(e.data); };
   rec.onstop=async()=>{ stream.getTracks().forEach(t=>t.stop()); recording=null;
-    const ok=await vput(p.id,new Blob(parts,{type:rec.mimeType||"audio/webm"})); p.voice=ok; savePeople(); renderPeople();
-    st.textContent=ok?p.name+"'s voice sample is saved on this phone.":"Couldn't save the voice sample."; };
+    const ok=await vput(p.id,new Blob(parts,{type:rec.mimeType||"audio/webm"})); p.voice=ok; delete p.vp; savePeople(); renderPeople();
+    st.textContent=ok?p.name+"'s voice sample is saved on this phone.":"Couldn't save the voice sample.";
+    if(ok&&vReady){ const done=await enrol(p); st.textContent=done?"TODO will now know "+p.name+" by voice.":p.name+"'s sample was too quiet or short to learn the voice. Try again, a little closer."; } };
   let left=6; st.textContent=p.name+": say a sentence or two in your normal voice… "+left;
   const tick=setInterval(()=>{ left--; if(left>0) st.textContent=p.name+": say a sentence or two in your normal voice… "+left; else { clearInterval(tick); rec.stop(); } },1000);
   rec.start();
@@ -2246,7 +2329,7 @@ async function recordVoice(p){
 async function playVoice(p){ const b=await vget(p.id); if(!b) return; const a=new Audio(URL.createObjectURL(b)); a.play().catch(()=>{}); }
 function renderPeople(){
   const el=document.getElementById("peoplelist"); if(!el) return;
-  el.innerHTML=people.length?people.map(p=>`<div class="pitem"><div class="pname">${esc(p.name)}<span>${esc([p.role,langsOf(p).join(", ")].filter(Boolean).join(" · ")||"—")}${p.voice?" · voice saved":""}</span></div>
+  el.innerHTML=people.length?people.map(p=>`<div class="pitem"><div class="pname">${esc(p.name)}<span>${esc([p.role,langsOf(p).join(", ")].filter(Boolean).join(" · ")||"—")}${p.vp?" · knows the voice":p.voice?" · voice saved":""}</span></div>
     <button class="btn" type="button" data-p="rec" data-id="${p.id}">${p.voice?"Re-record voice":"Record voice"}</button>
     ${p.voice?`<button class="btn quiet" type="button" data-p="play" data-id="${p.id}">Play</button>`:""}
     <button class="btn quiet" type="button" data-p="del" data-id="${p.id}" aria-label="Remove ${esc(p.name)}">Remove</button></div>`).join("")
@@ -2466,7 +2549,8 @@ async function liveStart(){
     await ac.audioWorklet.addModule(URL.createObjectURL(new Blob([MIC_WORKLET],{type:"text/javascript"})));
     const src=ac.createMediaStreamSource(live.stream), node=new AudioWorkletNode(ac,"mic16k"), mute=ac.createGain();
     mute.gain.value=0; src.connect(node); node.connect(mute); mute.connect(ac.destination);
-    node.port.onmessage=e=>{ if(live.ws&&live.ws.readyState===1) live.ws.send(JSON.stringify({realtimeInput:{audio:{mimeType:"audio/pcm;rate=16000",data:ab2b64(e.data)}}})); };
+    node.port.onmessage=e=>{ try{ vHear(new Int16Array(e.data)); }catch(err){}
+      if(live.ws&&live.ws.readyState===1) live.ws.send(JSON.stringify({realtimeInput:{audio:{mimeType:"audio/pcm;rate=16000",data:ab2b64(e.data)}}})); };
     live.src=src; live.node=node;
   }catch(e){ liveStop(); return false; }
   live.on=true; live.userText=""; live.botText=""; live.faceSet=false;
@@ -2501,8 +2585,10 @@ function onLive(m){
   if(m.toolCall&&m.toolCall.functionCalls){   // Gemini asked to change or read the lists
     if(live.userText.trim()){ liveUser(live.userText.trim()); live.userText=""; }
     if(turn.snap===null){ turnBegin(); live.gotAudio=false; } speaker.at=Date.now();   // held until this turn is heard; the speaker stays for the session
-    const out=m.toolCall.functionCalls.map(c=>({id:c.id,name:c.name,response:runTool(c.name,c.args)}));
-    if(live.ws&&live.ws.readyState===1) live.ws.send(JSON.stringify({toolResponse:{functionResponses:out}}));
+    const calls=m.toolCall.functionCalls;
+    vSettle().then(()=>{ voiceToSpeaker(); if(speaker.byVoice&&speaker.p) $("#heard").textContent=($("#heard").textContent||"")+" · "+speaker.p.name;
+      const out=calls.map(c=>({id:c.id,name:c.name,response:runTool(c.name,c.args)}));
+      if(live.ws&&live.ws.readyState===1) live.ws.send(JSON.stringify({toolResponse:{functionResponses:out}})); });
     return;
   }
   const sc=m.serverContent; if(!sc) return;
@@ -2523,7 +2609,7 @@ function onLive(m){
       let rb=[]; try{ rb=(R.readBeats(live.botText)||[]).filter(b=>b[0]!=="attentive"); }catch(e){}
       if(rb.length) F.playSteps(rb.slice(0,1).map(b=>[b[0],2.5,b[2]])); }
   }
-  if(sc.turnComplete){ if(live.userText.trim()){ liveUser(live.userText.trim()); live.userText=""; }
+  if(sc.turnComplete){ vTurnEnd(); if(live.userText.trim()){ liveUser(live.userText.trim()); live.userText=""; }
     if(turn.snap!==null){ if(live.gotAudio) turnCommit(); else turnRollback(); } live.gotAudio=false;   // delivered only once it was said aloud
     live.botText=""; live.faceSet=false; $("#heard").textContent="I'm listening…"; $("#mic").classList.add("on"); }
 }

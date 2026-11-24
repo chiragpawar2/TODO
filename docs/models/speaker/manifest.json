@@ -1,0 +1,7 @@
+{
+  "name": "CAM++ speaker (3D-Speaker zh/en)",
+  "file": "campplus.onnx",
+  "size": 28281165,
+  "sha256": "53cab20ba8f2eb2f6e2d89ecc18e88ef3222169b61b4419cbc13666744a4574b",
+  "dim": 192
+}

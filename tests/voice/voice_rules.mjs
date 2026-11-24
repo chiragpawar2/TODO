@@ -1,0 +1,27 @@
+import fs from "node:fs";
+const html = fs.readFileSync(process.argv[2], "utf8");
+const code = html.slice(html.indexOf("/* ---------- list tools"), html.indexOf("async function think("));
+const el = () => ({ addEventListener() {}, innerHTML: "", textContent: "", hidden: false, value: "" });
+const data = { lists: [{ id: 1, title: "Groceries", items: [{ id: 2, text: "Eggs", done: false }] }], nextId: 10 };
+let renders = 0; const store = {};
+const env = { localStorage: { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = v; } }, data, left: l => l.items.filter(i=>!i.done), nid: () => ++data.nextId, save() {}, go() {}, render() { renders++; }, ui: { view: "x" },
+  F: { flash() {} }, getKey: () => "k", navigator: { onLine: true }, document: { getElementById: () => el() }, $: () => el(), esc: s => s, setInterval: () => 0, shush() {}, speakReply() {}, stopPlayback() {}, indexedDB: {} };
+let n = 0;
+const sse = o => new Response("data: " + JSON.stringify(o) + "\n\n", { status: 200 });
+const fakeFetch = async () => { n++;
+  if (n === 1) return sse({ candidates: [{ content: { parts: [{ functionCall: { name: "add_items", args: { list: "Groceries", items: ["milk"] } } }] } }] });
+  return new Response("", { status: 429 }); };
+const B = new Function(...Object.keys(env), "fetch", "TextDecoder", "AbortController", code + "; return {streamBrain, runTool, people, voice, speakerReset, vMatch, get msgs(){return msgs}};")(...Object.values(env), fakeFetch, TextDecoder, AbortController);
+const v=k=>{const a=new Array(192).fill(0); a[k]=1; return a;};
+B.people.push({id:1,name:"Sunita",role:"cook",vp:v(0)},{id:2,name:"Raju",role:"driver",vp:v(1)},{id:3,name:"Anjali",role:"mother"});
+B.runTool("leave_message",{from:"Anjali",to:"Sunita",message:"make poha, and buy milk"});
+const t=[];
+const m=B.vMatch(v(0).map((x,i)=>i===0?0.8:i===5?0.6:0)); t.push(["match Sunita",m.p&&m.p.name==="Sunita"]);
+t.push(["weak voice no match",!B.vMatch(v(7)).p]);
+B.speakerReset(); t.push(["no voice → ask name",B.runTool("get_messages",{}).error==="who_is_speaking_unknown"]);
+B.speakerReset(); Object.assign(B.voice,{p:B.people[0],score:.8,at:Date.now()}); const g=B.runTool("get_messages",{}); t.push(["voice Sunita gets her message",g.ok&&g.recognised_by_voice&&g.messages.length===1]);
+B.speakerReset(); Object.assign(B.voice,{p:B.people[1],score:.8,at:Date.now()}); const s=B.runTool("set_speaker",{name:"Sunita"}); t.push(["Raju's voice claiming Sunita refused",s.error==="voice_does_not_match"]);
+t.push(["…and gets nothing",B.runTool("get_messages",{for:"Sunita"}).error==="not_the_recipient"]);
+B.speakerReset(); Object.assign(B.voice,{p:B.people[1],score:.8,at:Date.now()}); t.push(["Anjali (no sample) claim allowed",B.runTool("set_speaker",{name:"Anjali"}).ok]);
+B.speakerReset(); Object.assign(B.voice,{p:B.people[0],score:.8,at:Date.now()-120e3}); t.push(["stale voice ignored",B.runTool("get_messages",{}).error==="who_is_speaking_unknown"]);
+for(const [n,ok] of t) console.log((ok?"PASS ":"FAIL ")+n);
