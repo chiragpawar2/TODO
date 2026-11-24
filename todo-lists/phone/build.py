@@ -61,7 +61,7 @@ HEAD = """<!doctype html>
 <meta name="theme-color" content="#0c0d10">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="homebot">
+<meta name="apple-mobile-web-app-title" content="TODO">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -167,7 +167,7 @@ def main() -> None:
     check(html)
     io.open(os.path.join(DOCS, "index.html"), "w", encoding="utf-8").write(html)
     manifest = {
-        "name": "homebot", "short_name": "homebot", "start_url": "./", "scope": "./",
+        "name": "TODO", "short_name": "TODO", "start_url": "./", "scope": "./",
         "display": "standalone", "background_color": "#0c0d10", "theme_color": "#0c0d10",
         "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
                   {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}],

@@ -1,4 +1,4 @@
-<title>homebot</title>
+<title>TODO</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap">
 <style>
@@ -36,6 +36,23 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
 .listbtn svg{width:30px;height:30px}
 .listbtn:active{transform:scale(.96)}
 .screen.ui .listbtn{display:none}
+.msgbtn{position:absolute;z-index:20;right:90px;top:16px;width:60px;height:60px;border-radius:18px;display:grid;place-items:center;cursor:pointer;
+  background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);color:#fff}
+.msgbtn svg{width:28px;height:28px}
+.msgbtn:active{transform:scale(.96)}
+.msgbtn .pend{position:absolute;top:9px;right:9px;width:11px;height:11px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 2px var(--s0)}
+.screen.ui .msgbtn{display:none}
+.mlist{display:flex;flex-direction:column;gap:10px}
+.mcard{display:flex;gap:12px;align-items:flex-start;background:var(--s1);border:1px solid var(--s2);border-radius:16px;padding:14px 14px 14px 16px;transition:opacity .4s}
+.mcard .mbody{flex:1;min-width:0;cursor:pointer;text-align:left;background:none;border:0;color:var(--t1);font-family:inherit;padding:0}
+.mmeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:15px;font-weight:600;color:var(--t2)}
+.mmeta b{color:var(--t1);font-weight:700}
+.mmeta .arrow{color:var(--t3)}
+.mtext{margin-top:6px;font-size:21px;font-weight:500;line-height:1.35}
+.mstat{margin-top:8px;display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--t2);background:var(--s2);border-radius:999px;padding:4px 10px}
+.mstat.wait::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--acc)}
+.mstat.done::before{content:"";width:8px;height:8px;border-radius:50%;background:#5fd39a}
+.mcard .ib{width:46px;height:46px}
 .caption{position:absolute;z-index:20;left:0;right:0;bottom:30px;text-align:center;padding:0 120px;
   font-size:21px;font-weight:500;line-height:1.3;color:rgba(243,245,248,.88);min-height:28px;transition:opacity .2s}
 .screen.ui .caption,.screen.listening .caption{opacity:0}
@@ -129,7 +146,7 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
 
 /* settings: brain key and emotion model, nothing else */
 .settings{position:absolute;inset:0;z-index:50;background:rgba(4,5,8,.82);display:grid;place-items:center}
-.sbox{width:min(700px,calc(var(--sw) - 48px));background:var(--s1);border:1px solid var(--hl);border-radius:20px;padding:20px 22px 22px;box-sizing:border-box}
+.sbox{max-height:452px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--hl) transparent;width:min(760px,calc(var(--sw) - 48px));background:var(--s1);border:1px solid var(--hl);border-radius:20px;padding:20px 22px 22px;box-sizing:border-box}
 .shead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .shead h2{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em}
 .scols{display:grid;grid-template-columns:1fr 1fr;gap:22px}
@@ -142,6 +159,15 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
 .keystate{font-size:14.5px;color:var(--t2)}
 .keystate.ok{color:#5fd39a}
 .mtrack{height:8px;border-radius:4px;background:var(--s2);overflow:hidden}
+.people{margin-top:22px;padding-top:18px;border-top:1px solid var(--s2);display:flex;flex-direction:column;gap:10px}
+.prow{display:grid;grid-template-columns:1.1fr 1.2fr .9fr auto;gap:8px}
+.prow .field{font-size:17px;height:48px}
+.prow select.field{padding:0 10px}
+.prow .btn{height:48px}
+.pitem{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--s2)}
+.pitem .pname{flex:1;min-width:0;font-size:17px;font-weight:600}
+.pitem .pname span{display:block;font-size:14px;font-weight:500;color:var(--t2)}
+.pitem .btn{height:42px;font-size:15px;padding:0 12px}
 .mtrack i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
 
 /* held upright: ask for landscape */
@@ -154,9 +180,13 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
 
 <div id="stage"><div class="inner">
   <div class="screen" id="screen">
-    <div id="facebox" aria-label="homebot's face"><canvas id="face" width="800" height="480"></canvas></div>
+    <div id="facebox" aria-label="TODO's face"><canvas id="face" width="800" height="480"></canvas></div>
     <button class="listbtn" id="listbtn" aria-label="Open lists">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6H20M9.5 12H20M9.5 18H20"/><path d="M3.5 6l1.4 1.4L7 5.2M3.5 12l1.4 1.4L7 11.2M3.8 18h2.6"/></svg>
+    </button>
+    <button class="msgbtn" id="msgbtn" aria-label="Messages">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z"/><path d="M8 10h8M8 13.5h5"/></svg>
+      <span class="pend" id="msgpend" hidden></span>
     </button>
     <div class="caption" id="caption"></div>
     <div id="ui"></div>
@@ -164,7 +194,7 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
     <button class="dctl" id="gear" type="button" aria-label="Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
     </button>
-    <button class="dctl" id="micbtn" type="button" aria-label="Talk to homebot">
+    <button class="dctl" id="micbtn" type="button" aria-label="Talk to TODO">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
     </button>
     <div class="settings" id="settings" hidden>
@@ -186,11 +216,23 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
               <span style="display:flex;gap:6px"><button class="btn primary" id="mload" type="button">Download</button><button class="btn quiet" id="mforget" type="button" hidden>Remove</button></span></div>
           </section>
         </div>
+        <section class="people">
+          <h3>People</h3>
+          <p class="hint">Who TODO knows, so messages reach the right person. A voice sample is saved on this phone, ready for recognising voices later.</p>
+          <div id="peoplelist"></div>
+          <form class="prow" id="personform">
+            <input class="field" id="pname" autocomplete="off" placeholder="Name" aria-label="Name">
+            <input class="field" id="prole" autocomplete="off" placeholder="Who, e.g. cook, mother" aria-label="Who they are">
+            <select class="field" id="plang" aria-label="Language"><option>Marathi</option><option>Hindi</option><option>English</option></select>
+            <button class="btn primary">Add</button>
+          </form>
+          <span class="keystate" id="pstate"></span>
+        </section>
       </div>
     </div>
   </div>
 </div></div>
-<div id="rotate" role="alert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M3 9a9 9 0 0 1 4-5M21 15a9 9 0 0 1-4 5"/></svg>Turn your phone sideways to talk to homebot</div>
+<div id="rotate" role="alert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M3 9a9 9 0 0 1 4-5M21 15a9 9 0 0 1-4 5"/></svg>Turn your phone sideways to talk to TODO</div>
 <!--FACE_AND_READER-->
 <script>
 (function(){
@@ -278,7 +320,7 @@ function phoneSay(text,done){
   speechSynthesis.speak(u); setTimeout(face,1200);
 }
 
-// Gemini speech: one fixed voice, so homebot always sounds like himself. The
+// Gemini speech: one fixed voice, so TODO always sounds like himself. The
 // sentence goes in exactly as written. Tested: these speech models read any
 // style instruction aloud ("Say cheerfully. ...") and refuse a separate system
 // instruction, so tone comes from the words themselves and the face shows feeling.
@@ -352,7 +394,7 @@ function render(){
   $("#screen").classList.toggle("ui",ui.view!=="home");
   const fb=$("#facebox");
   if(ui.view==="home"){ fb.removeAttribute("role"); fb.removeAttribute("tabindex"); }
-  else { fb.setAttribute("role","button"); fb.setAttribute("tabindex","0"); fb.setAttribute("aria-label","Back to homebot"); }
+  else { fb.setAttribute("role","button"); fb.setAttribute("tabindex","0"); fb.setAttribute("aria-label","Back to TODO"); }
   let h="";
   if(ui.view==="lists"){
     h+=`<div class="bar"><span class="name"></span><button class="btn" data-a="newlist">${I.plus} New list</button></div><div class="scroll"><div class="grid">`;
@@ -389,6 +431,23 @@ function render(){
     } else h+=`<div class="now">All done</div><button class="btn primary" data-a="stop">Back to the list</button>`;
     h+=`</div>`;
   }
+  if(ui.view==="messages"){
+    fadeMessages(true);
+    h+=`<div class="bar"><span class="name"></span></div><div class="scroll"><div class="mlist">`;
+    const list=msgs.list.slice().sort((a,b)=>(!!a.delivered_at-!!b.delivered_at)||(b.created-a.created));
+    for(const m of list){
+      const t=Date.now(), fades=m.delivered_at?m.delivered_at+DELIVERED_KEEP_H*3600e3:m.expires;
+      const span=m.delivered_at?DELIVERED_KEEP_H*3600e3:(m.expires-m.created), op=Math.max(.38,Math.min(1,(fades-t)/span+.2));
+      const stat=m.delivered_at?`<span class="mstat done">Delivered ${ago(m.delivered_at)} · fades in ${dur(fades-t)}</span>`
+                               :`<span class="mstat wait">Waiting · fades in ${dur(fades-t)}</span>`;
+      h+=`<div class="mcard" style="opacity:${m.delivered_at?op.toFixed(2):1}"><button class="mbody" data-a="msgplay" data-id="${m.id}" aria-label="Play message for ${esc(m.to)}">
+        <div class="mmeta">From <b>${esc(m.from)}</b><span class="arrow">→</span>For <b>${esc(m.to)}</b><span>· ${clock(m.created)}</span></div>
+        <div class="mtext">${esc(m.text)}</div>${stat}</button>
+        <button class="ib del" data-a="msgdel" data-id="${m.id}" aria-label="Delete message">${I.del}</button></div>`;
+    }
+    if(!list.length) h+=`<div class="empty">No messages yet. Tap the mic and say: tell the cook to make poha tomorrow.</div>`;
+    h+=`</div></div>`;
+  }
   if(ui.confirm) h+=`<div class="sheet"><div class="box"><h4>${esc(ui.confirm.title)}</h4><p>${esc(ui.confirm.body)}</p><div class="acts"><button class="btn" data-a="cancel">Keep it</button><button class="btn primary" style="background:var(--danger);border-color:var(--danger)" data-a="confirm">Remove</button></div></div></div>`;
   $("#ui").innerHTML=h;
   const t=$("#titleIn"); if(t){ t.focus(); t.select(); t.onkeydown=e=>{ if(e.key==="Enter") saveTitle(t.value); if(e.key==="Escape"){ui.editTitle=false;render();} }; t.onblur=()=>ui.editTitle&&saveTitle(t.value); }
@@ -412,6 +471,7 @@ function step(kind){
   else say(`That's the end. ${t2.length} skipped.`);
 }
 $("#listbtn").onclick=()=>{ go(ui.cur?"list":"lists"); };
+$("#msgbtn").onclick=()=>{ ui.byTool=false; go("messages"); };
 $("#facebox").onclick=e=>{
   if(ui.view!=="home"){ go("home"); return; }
   // Home: the face is the real one, so it reacts to touch the same way the app does.
@@ -430,7 +490,9 @@ $("#ui").addEventListener("click",e=>{
     edititem:()=>{ ui.editItem=id; render(); }, rmitem:()=>{ l.items=l.items.filter(i=>i.id!==id); ui.editItem=null; render(); },
     untick:()=>{ l.items.forEach(i=>i.done=false); render(); }, cleardone:()=>{ l.items=l.items.filter(i=>!i.done); render(); },
     cancel:()=>{ ui.confirm=null; render(); }, confirm:()=>{ const r=ui.confirm.run; ui.confirm=null; r(); },
-    pdone:()=>step("done"), pskip:()=>step("skip"), pback:()=>step("back")}[a]||(()=>{}))();
+    pdone:()=>step("done"), pskip:()=>step("skip"), pback:()=>step("back"),
+    msgplay:()=>{ const m=msgs.list.find(x=>x.id===id); if(m) speakMessage(m); },
+    msgdel:()=>{ msgs.list=msgs.list.filter(x=>x.id!==id); saveMsgs(); updateMsgDot(); render(); }}[a]||(()=>{}))();
 });
 $("#ui").addEventListener("submit",e=>{
   e.preventDefault(); const f=e.target, l=cur(); if(!l) return;
@@ -553,6 +615,7 @@ function needList(name){
 }
 function runTool(name,a){
   a=a||{};
+  const mr=runMsgTool(name,a); if(mr) return mr;
   try{
     if(name==="get_lists") return {ok:true,lists:data.lists.map(snapshot)};
     if(name==="create_list"){
@@ -599,6 +662,145 @@ function runTool(name,a){
   }catch(e){ return {ok:false,error:"failed",detail:String(e&&e.message||e)}; }
   finally{ save(); }
 }
+/* ---------- messages: TODO passes messages between people ----------
+   Kept apart from the lists. A message waits until it is delivered or its time
+   runs out (24 h unless the sender says otherwise). Once delivered it stays for
+   3 h, so it can be repeated or said again in another language, then fades. */
+const MSG_KEY="todo-messages-v1", PEOPLE_KEY="todo-people-v1", DELIVERED_KEEP_H=3, DEFAULT_VALID_H=24;
+let msgs; try{ msgs=JSON.parse(localStorage.getItem(MSG_KEY)||"null")||{list:[],nextId:1}; }catch(e){ msgs={list:[],nextId:1}; }
+let people; try{ people=JSON.parse(localStorage.getItem(PEOPLE_KEY)||"null")||[]; }catch(e){ people=[]; }
+const saveMsgs=()=>{ try{ localStorage.setItem(MSG_KEY,JSON.stringify(msgs)); }catch(e){} };
+const savePeople=()=>{ try{ localStorage.setItem(PEOPLE_KEY,JSON.stringify(people)); }catch(e){} };
+const ago=t=>{ const m=Math.round((Date.now()-t)/60000); return m<1?"just now":m<60?m+" min ago":Math.round(m/60)+" h ago"; };
+const dur=ms=>{ const m=Math.max(0,Math.round(ms/60000)); return m<60?m+" min":Math.floor(m/60)+" h"+(m%60?" "+(m%60)+" min":""); };
+const clock=t=>new Date(t).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
+function fadeMessages(quiet){
+  const t=Date.now(), n=msgs.list.length;
+  msgs.list=msgs.list.filter(m=>m.delivered_at?t<m.delivered_at+DELIVERED_KEEP_H*3600e3:t<m.expires);
+  if(msgs.list.length!==n){ saveMsgs(); if(!quiet&&ui.view==="messages") render(); }
+  updateMsgDot();
+}
+function updateMsgDot(){ const el=document.getElementById("msgpend"); if(el) el.hidden=!msgs.list.some(m=>!m.delivered_at); }
+// The same person can be named, or called by role, in three languages.
+const ROLE_GROUPS=[["cook","maid","bai","maushi","mavshi","kaki","kaamwali","kamwali","maharaj","helper","stafu","बाई","मावशी","स्वयंपाक","कुक","मेड","महाराज","कामवाली"],
+  ["mother","mom","mummy","mumma","aai","maa","amma","आई","माँ","मम्मी"],["father","dad","papa","baba","पापा","बाबा","वडील"],
+  ["grandmother","grandma","aaji","dadi","nani","आजी","दादी","नानी"],["grandfather","grandpa","aajoba","dada","nana","आजोबा","दादा","नाना"],
+  ["driver","ड्रायवर","ड्राइवर"]];
+const pnorm=x=>String(x||"").toLowerCase().replace(/[’'.,!?]/g,"").replace(/\s+/g," ").trim().replace(/^(the|our|my)\s+/,"").replace(/\s*(ji|जी|tai|ताई)$/,"");
+function findPerson(x){ const q=pnorm(x); if(!q) return null;
+  return people.find(p=>pnorm(p.name)===q)||people.find(p=>p.role&&pnorm(p.role)===q)
+    ||people.find(p=>q.split(" ").includes(pnorm(p.name)))||people.find(p=>p.role&&q.includes(pnorm(p.role)))||null; }
+function whoKey(x){
+  const p=findPerson(x); if(p) return "p"+p.id;
+  const q=pnorm(x);
+  for(let i=0;i<ROLE_GROUPS.length;i++) if(ROLE_GROUPS[i].some(w=>q===w||q.split(" ").includes(w))){
+    const r=people.find(pp=>pp.role&&ROLE_GROUPS[i].some(w=>pnorm(pp.role).split(" ").includes(w)));
+    return r?"p"+r.id:"g"+i; }
+  return "n"+q;
+}
+const samePerson=(a,b)=>whoKey(a)===whoKey(b);
+const msgView=m=>({id:m.id,from:m.from,to:m.to,message:m.text,left_at:clock(m.created),delivered:!!m.delivered_at,
+  fades_in:dur((m.delivered_at?m.delivered_at+DELIVERED_KEEP_H*3600e3:m.expires)-Date.now())});
+function showMsgChange(){
+  if(ui.view==="home"||ui.byTool){ ui.byTool=true; go("messages"); } else render();
+  clearTimeout(toolBack);
+  toolBack=setTimeout(()=>{ if(ui.byTool&&ui.view==="messages"){ ui.byTool=false; go("home"); } },6000);
+}
+function speakMessage(m){ const line="Message from "+m.from+" for "+m.to+": "+m.text;
+  $("#caption").textContent=line; if(typeof live!=="undefined"&&live.on) stopPlayback(); shush(); speakReply(line); }
+
+const MSG_TOOLS=[
+  {name:"leave_message",description:"Save a message one person wants passed on to another. Use when someone says tell X, remind X, pass on to X, X should do something, and the like.",parameters:{type:"OBJECT",properties:{
+    from:{type:"STRING",description:"Who is leaving it, name or role, e.g. Anjali"},to:{type:"STRING",description:"Who it is for, name or role, e.g. the cook"},
+    message:{type:"STRING",description:"Exactly what should be passed on, every detail, in the sender's own language and words"},
+    valid_hours:{type:"NUMBER",description:"How long to keep it if not delivered. Default 24. Use a shorter time when the sender says today, this morning, by evening."}},required:["from","to","message"]}},
+  {name:"get_messages",description:"Get messages waiting for a person, plus ones delivered in the last 3 hours (so they can be repeated or translated).",parameters:{type:"OBJECT",properties:{for:{type:"STRING",description:"Name or role of the person asking, e.g. Sunita or the cook"}},required:["for"]}},
+  {name:"mark_delivered",description:"Mark messages as delivered after you have said them to the person they are for.",parameters:{type:"OBJECT",properties:{ids:{type:"ARRAY",items:{type:"NUMBER"}}},required:["ids"]}},
+  {name:"delete_message",description:"Delete a message, e.g. when the sender cancels it.",parameters:{type:"OBJECT",properties:{id:{type:"NUMBER"}},required:["id"]}},
+  {name:"list_messages",description:"All messages currently kept, for the person managing the house.",parameters:{type:"OBJECT",properties:{}}},
+  {name:"get_people",description:"The people TODO knows: names, who they are, their language.",parameters:{type:"OBJECT",properties:{}}},
+  {name:"add_person",description:"Remember a new person when introduced, e.g. this is Sunita, our cook.",parameters:{type:"OBJECT",properties:{name:{type:"STRING"},role:{type:"STRING"},language:{type:"STRING"}},required:["name"]}}
+];
+function runMsgTool(name,a){
+  a=a||{}; fadeMessages(true);
+  if(name==="leave_message"){
+    const text=String(a.message||"").trim(), to=String(a.to||"").trim(), from=String(a.from||"").trim()||"someone";
+    if(!text||!to) return {ok:false,error:"missing_message_or_recipient",hint:"Ask who it is for and what to say."};
+    const h=Math.max(.25,Math.min(168,+a.valid_hours||DEFAULT_VALID_H)), t=Date.now();
+    const pf=findPerson(from), pt=findPerson(to);
+    const m={id:msgs.nextId++,from:pf?pf.name:from,to:pt?pt.name+(pt.role?" ("+pt.role+")":""):to,text,created:t,expires:t+h*3600e3,delivered_at:null};
+    msgs.list.push(m); saveMsgs(); F.flash("happy",1.1); showMsgChange();
+    return {ok:true,saved:msgView(m),keeps_for_hours:h};
+  }
+  if(name==="get_messages"){
+    const who=String(a.for||"").trim(); if(!who) return {ok:false,error:"who_is_asking_unknown",hint:"Ask who they are first."};
+    const mine=msgs.list.filter(m=>samePerson(m.to,who)||samePerson(m.to.replace(/\s*\(.*\)$/,""),who)||(m.to.match(/\((.*)\)$/)&&samePerson(m.to.match(/\((.*)\)$/)[1],who)));
+    if(mine.length) showMsgChange();
+    return {ok:true,for:who,messages:mine.map(msgView),
+      hint:mine.length?"Say each waiting message faithfully, every detail, in the language the person is speaking now, translating if needed. Then call mark_delivered with their ids. If they ask again or want another language, repeat it.":"There is no message for this person. Say so; never invent one."};
+  }
+  if(name==="mark_delivered"){ const ids=(a.ids||[]).map(Number), done=[];
+    for(const m of msgs.list) if(ids.includes(m.id)&&!m.delivered_at){ m.delivered_at=Date.now(); done.push(m.id); }
+    saveMsgs(); updateMsgDot(); if(ui.view==="messages") render();
+    return {ok:true,delivered:done,fades_after_hours:DELIVERED_KEEP_H}; }
+  if(name==="delete_message"){ const n=msgs.list.length; msgs.list=msgs.list.filter(m=>m.id!==+a.id); saveMsgs(); updateMsgDot(); if(ui.view==="messages") render();
+    return {ok:msgs.list.length<n}; }
+  if(name==="list_messages") return {ok:true,messages:msgs.list.map(msgView)};
+  if(name==="get_people") return {ok:true,people:people.map(p=>({name:p.name,role:p.role,language:p.lang}))};
+  if(name==="add_person"){ const nm=String(a.name||"").trim(); if(!nm) return {ok:false,error:"missing_name"};
+    if(findPerson(nm)) return {ok:true,already_known:true};
+    people.push({id:Date.now(),name:nm,role:String(a.role||"").trim(),lang:String(a.language||"").trim(),voice:false}); savePeople(); renderPeople();
+    return {ok:true,added:nm}; }
+  return null;
+}
+const MSG_RULES="You also pass messages between the people of the house, including staff such as the cook or maid. "+
+  "When someone asks you to tell, remind or pass something on to another person, call leave_message with who it is from, who it is for and exactly what to say. If you don't know who is speaking, ask their name. "+
+  "When someone asks whether there is a message for them, or asks what to do or what to cook today, find out who they are (they may tell you, or ask), call get_messages for them, "+
+  "say each message faithfully with every detail in the language they are speaking now, translating if needed, and then call mark_delivered. "+
+  "If they did not understand, repeat it, in another language if they ask. Never invent a message and never tell one person's message to someone it is not for. ";
+function peopleLine(){ return people.length?" People you know: "+people.map(p=>p.name+(p.role?" ("+p.role+")":"")+(p.lang?", speaks "+p.lang:"")).join("; ")+".":""; }
+
+/* ---------- people in settings, with a voice sample kept on the phone ---------- */
+function vdb(){ return new Promise((res,rej)=>{ const r=indexedDB.open("todo-voices",1); r.onupgradeneeded=()=>r.result.createObjectStore("v"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function vput(id,blob){ const db=await vdb(); return new Promise(r=>{ const tx=db.transaction("v","readwrite"); tx.objectStore("v").put(blob,String(id)); tx.oncomplete=()=>r(true); tx.onerror=()=>r(false); }); }
+async function vget(id){ const db=await vdb(); return new Promise(r=>{ const q=db.transaction("v").objectStore("v").get(String(id)); q.onsuccess=()=>r(q.result||null); q.onerror=()=>r(null); }); }
+async function vdel(id){ try{ const db=await vdb(); db.transaction("v","readwrite").objectStore("v").delete(String(id)); }catch(e){} }
+let recording=null;
+async function recordVoice(p){
+  if(recording) return;
+  const st=$("#pstate");
+  if(!navigator.mediaDevices||!window.MediaRecorder){ st.textContent="This browser can't record a voice sample."; return; }
+  let stream; try{ stream=await navigator.mediaDevices.getUserMedia({audio:true}); }catch(e){ st.textContent="The microphone is blocked for this site."; return; }
+  const rec=new MediaRecorder(stream), parts=[]; recording=rec;
+  rec.ondataavailable=e=>{ if(e.data.size) parts.push(e.data); };
+  rec.onstop=async()=>{ stream.getTracks().forEach(t=>t.stop()); recording=null;
+    const ok=await vput(p.id,new Blob(parts,{type:rec.mimeType||"audio/webm"})); p.voice=ok; savePeople(); renderPeople();
+    st.textContent=ok?p.name+"'s voice sample is saved on this phone.":"Couldn't save the voice sample."; };
+  let left=6; st.textContent=p.name+": say a sentence or two in your normal voice… "+left;
+  const tick=setInterval(()=>{ left--; if(left>0) st.textContent=p.name+": say a sentence or two in your normal voice… "+left; else { clearInterval(tick); rec.stop(); } },1000);
+  rec.start();
+}
+async function playVoice(p){ const b=await vget(p.id); if(!b) return; const a=new Audio(URL.createObjectURL(b)); a.play().catch(()=>{}); }
+function renderPeople(){
+  const el=document.getElementById("peoplelist"); if(!el) return;
+  el.innerHTML=people.length?people.map(p=>`<div class="pitem"><div class="pname">${esc(p.name)}<span>${esc([p.role,p.lang].filter(Boolean).join(" · ")||"—")}${p.voice?" · voice saved":""}</span></div>
+    <button class="btn" type="button" data-p="rec" data-id="${p.id}">${p.voice?"Re-record voice":"Record voice"}</button>
+    ${p.voice?`<button class="btn quiet" type="button" data-p="play" data-id="${p.id}">Play</button>`:""}
+    <button class="btn quiet" type="button" data-p="del" data-id="${p.id}" aria-label="Remove ${esc(p.name)}">Remove</button></div>`).join("")
+    :`<p class="hint">No one added yet.</p>`;
+}
+document.getElementById("peoplelist").addEventListener("click",e=>{
+  const b=e.target.closest("[data-p]"); if(!b) return; const p=people.find(x=>x.id===+b.dataset.id); if(!p) return;
+  if(b.dataset.p==="rec") recordVoice(p);
+  if(b.dataset.p==="play") playVoice(p);
+  if(b.dataset.p==="del"){ people=people.filter(x=>x!==p); vdel(p.id); savePeople(); renderPeople(); }
+});
+document.getElementById("personform").onsubmit=e=>{ e.preventDefault();
+  const nm=$("#pname").value.trim(); if(!nm){ $("#pstate").textContent="Add a name first."; return; }
+  people.push({id:Date.now(),name:nm,role:$("#prole").value.trim(),lang:$("#plang").value,voice:false}); savePeople();
+  $("#pname").value=""; $("#prole").value=""; $("#pstate").textContent=nm+" added."; renderPeople(); };
+renderPeople(); fadeMessages(true); setInterval(()=>fadeMessages(false),60000);
+
 const LIST_RULES="You manage the family's lists only through your tools. "+
   "Never say a list was changed unless the tool result says ok. If a tool reports a problem, say so plainly. "+
   "Call get_lists when you need to know what is on a list. Keep each item in the words the person used. "+
@@ -619,12 +821,12 @@ const skipUntil={};
 let convo=[];
 function persona(){
   const lists=data.lists.map(l=>l.title+": "+(left(l).map(i=>i.text).join(", ")||"(all done)")).join("\n");
-  return "You are homebot, the warm home assistant of an Indian family who speak Marathi, Hindi and English. "+
+  return "You are TODO, the warm home helper of an Indian family who speak Marathi, Hindi and English. Your name is TODO; never call yourself a bot, an assistant or anything else. "+
     "You live on a small screen with an expressive face, and everything you write is spoken aloud. "+
     "Reply in one to three short sentences. No markdown, no lists, no emoji, no symbols. "+
     "Always answer in the language the person just spoke: Marathi to Marathi, Hindi to Hindi, English to English. Never switch language in the middle of an answer. Write Marathi and Hindi in Devanagari. Mix Hindi or Marathi with English only if they mixed it themselves. Decide the language from how the sentence is built, not from single words: an English sentence that contains Indian names or words like Aaji, atta, ghee or tulsi is English and gets an English answer. "+
-    "Be kind and practical. "+LIST_RULES+
-    "Today is "+new Date().toDateString()+". The lists are: "+data.lists.map(l=>l.title).join(", ")+".";
+    "Be kind and practical. "+LIST_RULES+MSG_RULES+
+    "Today is "+new Date().toDateString()+", time "+clock(Date.now())+". The lists are: "+data.lists.map(l=>l.title).join(", ")+"."+peopleLine();
 }
 const clean=t=>t.replace(/[*_#`>]/g,"");
 function trimConvo(){   // keep the last few turns, starting at a plain user message
@@ -646,7 +848,7 @@ async function streamBrain(text,onSentence){
       try{
         r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+id+":streamGenerateContent?alt=sse",{
           method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","x-goog-api-key":key},
-          body:JSON.stringify({systemInstruction:{parts:[{text:persona()}]},contents:convo,generationConfig:cfg,tools:[{functionDeclarations:LIST_TOOLS}]})});
+          body:JSON.stringify({systemInstruction:{parts:[{text:persona()}]},contents:convo,generationConfig:cfg,tools:[{functionDeclarations:LIST_TOOLS.concat(MSG_TOOLS)}]})});
       }catch(e){ clearTimeout(tm); if(navigator.onLine===false){ convo.length=mark; return {err:"I'm offline right now."}; } r=null; }
       if(!r||r.status===404||r.status>=500||r.status===429){ clearTimeout(tm); if(r&&r.status===429) skipUntil[id]=Date.now()+15*60*1000; busy=true; break; }
       if(!r.ok){ clearTimeout(tm); convo.length=mark;
@@ -729,13 +931,13 @@ registerProcessor("mic16k",Mic16k);`;
 function ab2b64(buf){ const b=new Uint8Array(buf); let s=""; for(let i=0;i<b.length;i+=0x8000) s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000)); return btoa(s); }
 function livePersona(){
   const lists=data.lists.map(l=>l.title+": "+(left(l).map(i=>i.text).join(", ")||"(all done)")).join("\n");
-  return "You are homebot, the warm home assistant of an Indian family who speak Marathi, Hindi and English. "+
+  return "You are TODO, the warm home helper of an Indian family who speak Marathi, Hindi and English. Your name is TODO; never call yourself a bot, an assistant or anything else. "+
     "You live on a small screen with an expressive face, and you talk out loud. "+
     "Always answer in the language the person just spoke: Marathi to Marathi, Hindi to Hindi, English to English. "+
     "Never switch language in the middle of an answer. Mix Hindi or Marathi with English only if they mixed it themselves. Decide the language from how the sentence is built, not from single words: an English sentence that contains Indian names or words like Aaji, atta, ghee or tulsi is English and gets an English answer. "+
     "Keep answers short: one to three sentences. Be kind and practical. "+
-    LIST_RULES+
-    "Today is "+new Date().toDateString()+". The lists are: "+data.lists.map(l=>l.title).join(", ")+".";
+    LIST_RULES+MSG_RULES+
+    "Today is "+new Date().toDateString()+", time "+clock(Date.now())+". The lists are: "+data.lists.map(l=>l.title).join(", ")+"."+peopleLine();
 }
 function liveCapable(){ return !!(getKey()&&window.WebSocket&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.AudioWorkletNode&&Date.now()>liveDownUntil); }
 function liveConnect(model,key){ return new Promise(resolve=>{
@@ -746,7 +948,7 @@ function liveConnect(model,key){ return new Promise(resolve=>{
     generationConfig:{responseModalities:["AUDIO"],speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:TTS_VOICE}}}},
     systemInstruction:{parts:[{text:livePersona()}]},
     realtimeInputConfig:{automaticActivityDetection:{silenceDurationMs:1200}},
-    tools:[{functionDeclarations:LIST_TOOLS}],
+    tools:[{functionDeclarations:LIST_TOOLS.concat(MSG_TOOLS)}],
     inputAudioTranscription:{},outputAudioTranscription:{}}}));
   ws.onmessage=async ev=>{ let m; try{ m=JSON.parse(typeof ev.data==="string"?ev.data:await ev.data.text()); }catch(e){ return; }
     if(m.setupComplete){ live.ws=ws; live.model=model; fin(true); return; }
@@ -784,7 +986,7 @@ function liveStop(){
   try{ live.node&&live.node.disconnect(); live.src&&live.src.disconnect(); }catch(e){}
   try{ live.stream&&live.stream.getTracks().forEach(t=>t.stop()); }catch(e){}
   live.node=live.src=live.stream=null; stopPlayback();
-  $("#micbtn").classList.remove("on"); $("#micbtn").setAttribute("aria-label","Talk to homebot"); $("#mic").classList.remove("on");
+  $("#micbtn").classList.remove("on"); $("#micbtn").setAttribute("aria-label","Talk to TODO"); $("#mic").classList.remove("on");
   F.flash("rest",.4);
 }
 function playPcm(b64,rate){
@@ -836,7 +1038,7 @@ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 const SILENCE_MS=2000, NOTHING_MS=7000;
 let rec=null, listening=false, finalText="", interimText="", silenceT=null, endTurn=false;
 function recLang(){ const n=(navigator.language||"en-IN").toLowerCase(); return n.startsWith("hi")?"hi-IN":n.startsWith("mr")?"mr-IN":"en-IN"; }
-function talkUI(on){ listening=on; $("#micbtn").classList.toggle("on",on); $("#micbtn").setAttribute("aria-label",on?"Done talking":"Talk to homebot");
+function talkUI(on){ listening=on; $("#micbtn").classList.toggle("on",on); $("#micbtn").setAttribute("aria-label",on?"Done talking":"Talk to TODO");
   $("#mic").classList.toggle("on",on); $("#screen").classList.toggle("listening",on); }
 function armSilence(ms){ clearTimeout(silenceT); silenceT=setTimeout(finishTurn,ms); }
 function finishTurn(){ clearTimeout(silenceT); endTurn=true; try{ rec&&rec.stop(); }catch(e){} }
