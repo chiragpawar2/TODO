@@ -36,9 +36,9 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
 .listbtn svg{width:30px;height:30px}
 .listbtn:active{transform:scale(.96)}
 .screen.ui .listbtn{display:none}
-.msgbtn{position:absolute;z-index:20;right:90px;top:16px;width:60px;height:60px;border-radius:18px;display:grid;place-items:center;cursor:pointer;
+.msgbtn{position:absolute;z-index:20;right:92px;top:16px;width:60px;height:60px;border-radius:18px;display:grid;place-items:center;cursor:pointer;
   background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);color:#fff}
-.msgbtn svg{width:28px;height:28px}
+.msgbtn svg{width:30px;height:30px}
 .msgbtn:active{transform:scale(.96)}
 .msgbtn .pend{position:absolute;top:9px;right:9px;width:11px;height:11px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 2px var(--s0)}
 .screen.ui .msgbtn{display:none}
@@ -52,8 +52,14 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
 .mstat{margin-top:8px;display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--t2);background:var(--s2);border-radius:999px;padding:4px 10px}
 .mstat.wait::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--acc)}
 .mstat.done::before{content:"";width:8px;height:8px;border-radius:50%;background:#5fd39a}
-.mcard .ib{width:46px;height:46px}
-.caption{position:absolute;z-index:20;left:0;right:0;bottom:30px;text-align:center;padding:0 120px;
+.mcard .ib{width:44px;height:44px;flex:none;color:var(--t3);background:transparent}
+.mcard .ib.del{color:var(--t3)}
+.mcard .ib.del:active{color:var(--danger)}
+.mempty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:56px 24px;color:var(--t2)}
+.mempty svg{width:40px;height:40px;color:var(--t3)}
+.mempty b{font-size:20px;color:var(--t1);font-weight:700}
+.mempty span{font-size:16px;max-width:460px;line-height:1.45}
+.caption{position:absolute;z-index:20;left:0;right:0;bottom:42px;text-align:center;padding:0 120px;
   font-size:21px;font-weight:500;line-height:1.3;color:rgba(243,245,248,.88);min-height:28px;transition:opacity .2s}
 .screen.ui .caption,.screen.listening .caption{opacity:0}
 
@@ -65,10 +71,14 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
 #micbtn.on::before{content:"";position:absolute;inset:-8px;border-radius:50%;border:2px solid rgba(229,72,77,.55);animation:ring 1.4s ease-out infinite}
 @keyframes ring{from{transform:scale(.85);opacity:1}to{transform:scale(1.25);opacity:0}}
 #micbtn:active{transform:scale(.96)}
-#gear{left:18px;bottom:24px;width:52px;height:52px;border-radius:50%;background:transparent;border:0;color:rgba(243,245,248,.32)}
+#gear{left:30px;bottom:30px;width:52px;height:52px;border-radius:50%;background:transparent;border:0;color:rgba(243,245,248,.32)}
 #gear svg{width:26px;height:26px}
 #gear:active{color:rgba(243,245,248,.6)}
 .dctl:focus-visible{outline:2px solid var(--acc);outline-offset:3px}
+.screen.ui #gear{display:none}
+.screen.ui #micbtn{width:60px;height:60px;right:18px;bottom:16px}
+.screen.ui #micbtn svg{width:26px;height:26px}
+.screen.ui .add,.screen.ui .sect{margin-right:76px}
 
 /* interface layer */
 #ui{position:absolute;inset:0;z-index:4;background:var(--s0);display:none;flex-direction:column}
@@ -83,14 +93,16 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
 .ib.del{color:var(--danger)}
 .ib[disabled]{opacity:.35;cursor:default}
 .ib:focus-visible,.card:focus-visible,.check:focus-visible,.btn:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-.scroll{flex:1;overflow-y:auto;padding:16px 16px 104px;scrollbar-width:thin;scrollbar-color:var(--hl) transparent}
+.scroll{flex:1;overflow-y:auto;padding:16px 16px 92px;scrollbar-width:thin;scrollbar-color:var(--hl) transparent}
 
 /* lists grid: no page title, straight to the lists */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
 .card{background:var(--s1);border:1px solid var(--s2);border-radius:16px;padding:16px;min-height:140px;cursor:pointer;text-align:left;color:var(--t1);
   font-family:inherit;display:flex;flex-direction:column;gap:8px}
 .card h3{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
-.card .peek{flex:1;color:var(--t2);font-size:15px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .peek{color:var(--t2);font-size:15px;line-height:1.4;max-height:2.8em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .prog{margin-top:auto}
+.listprog .prog{flex:1;max-width:420px}
 .prog{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:var(--t2)}
 .track{flex:1;height:6px;border-radius:3px;background:var(--s2);overflow:hidden}
 .track i{display:block;height:100%;border-radius:3px;background:var(--acc);transition:width .3s}
@@ -98,7 +110,7 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
 .card.new svg{width:22px;height:22px}
 
 /* a checklist */
-.listprog{display:flex;align-items:center;gap:12px;margin:0 0 6px;font-size:14px;font-weight:600;color:var(--t2)}
+.listprog{display:flex;align-items:center;gap:12px;margin:2px 0 8px;font-size:14px;font-weight:600;color:var(--t2)}
 .row{display:flex;align-items:center;gap:14px;min-height:60px;border-bottom:1px solid var(--s2)}
 .check{flex:none;width:32px;height:32px;border-radius:50%;border:2px solid var(--t3);background:transparent;display:grid;place-items:center;cursor:pointer;padding:0;color:#fff}
 .check svg{width:18px;height:18px;opacity:0}
@@ -121,12 +133,12 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
 .empty{color:var(--t2);font-size:18px;padding:22px 0 8px}
 
 /* play mode: one item at a time */
-.play{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:0 48px 10px}
-.play .stepno{font-size:15px;font-weight:600;color:var(--t2)}
-.play .now{font-size:40px;font-weight:700;letter-spacing:-.015em;line-height:1.18;text-align:center;text-wrap:balance;max-width:640px}
-.play .track{width:360px;flex:none}
-.play .ctl{display:flex;gap:12px}
-.play .btn{height:60px;font-size:19px;padding:0 24px}
+.playview{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:0 48px 10px}
+.playview .stepno{font-size:15px;font-weight:600;color:var(--t2)}
+.playview .now{font-size:40px;font-weight:700;letter-spacing:-.015em;line-height:1.18;text-align:center;text-wrap:balance;max-width:640px}
+.playview .track{width:360px;flex:none}
+.playview .ctl{display:flex;gap:12px}
+.playview .btn{height:60px;font-size:19px;padding:0 24px}
 
 /* confirm, built into the screen */
 .sheet{position:absolute;inset:0;z-index:40;background:rgba(0,0,0,.66);display:grid;place-items:center}
@@ -147,22 +159,33 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
 /* settings: brain key and emotion model, nothing else */
 .settings{position:absolute;inset:0;z-index:50;background:rgba(4,5,8,.82);display:grid;place-items:center}
 .sbox{max-height:452px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--hl) transparent;width:min(760px,calc(var(--sw) - 48px));background:var(--s1);border:1px solid var(--hl);border-radius:20px;padding:20px 22px 22px;box-sizing:border-box}
-.shead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.shead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .shead h2{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em}
 .scols{display:grid;grid-template-columns:1fr 1fr;gap:22px}
 .scols section{display:flex;flex-direction:column;gap:10px;min-width:0}
+.scols .hint{min-height:2.8em}
 .scols h3{margin:0;font-size:17px;font-weight:700}
 .hint{margin:0;color:var(--t2);font-size:14.5px;line-height:1.4}
-.krow{display:flex;gap:8px}
+.krow{display:flex;gap:8px;height:52px}
+.krow .field{height:52px}
 .krow .field{font-size:17px}
-.srow{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:24px}
+.link{background:none;border:0;padding:4px 0;font:600 14.5px var(--font);color:var(--t2);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.link:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:4px}
+.mrow{display:flex;align-items:center;gap:12px;height:52px}
+.mrow .mtrack{flex:1}
+.mrow .btn[hidden]{display:none}
 .keystate{font-size:14.5px;color:var(--t2)}
 .keystate.ok{color:#5fd39a}
 .mtrack{height:8px;border-radius:4px;background:var(--s2);overflow:hidden}
-.people{margin-top:22px;padding-top:18px;border-top:1px solid var(--s2);display:flex;flex-direction:column;gap:10px}
-.prow{display:grid;grid-template-columns:1.1fr 1.2fr .9fr auto;gap:8px}
+.people{margin-top:18px;padding-top:16px;border-top:1px solid var(--s2);display:flex;flex-direction:column;gap:10px}
+.people h3{margin:0;font-size:17px;font-weight:700}
+.prow{display:grid;grid-template-columns:1fr 1.1fr auto auto;gap:8px;align-items:center}
 .prow .field{font-size:17px;height:48px}
-.prow select.field{padding:0 10px}
+.plangs{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.plangs label{display:inline-flex;align-items:center;gap:5px;height:48px;padding:0 10px;border:1.5px solid var(--hl);border-radius:12px;font-size:15px;font-weight:600;color:var(--t2);cursor:pointer}
+.plangs label:has(input:checked){border-color:var(--acc);color:var(--t1);background:rgba(91,141,239,.14)}
+.plangs input{width:16px;height:16px;accent-color:var(--acc);margin:0}
 .prow .btn{height:48px}
 .pitem{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--s2)}
 .pitem .pname{flex:1;min-width:0;font-size:17px;font-weight:600}
@@ -185,7 +208,7 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6H20M9.5 12H20M9.5 18H20"/><path d="M3.5 6l1.4 1.4L7 5.2M3.5 12l1.4 1.4L7 11.2M3.8 18h2.6"/></svg>
     </button>
     <button class="msgbtn" id="msgbtn" aria-label="Messages">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z"/><path d="M8 10h8M8 13.5h5"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z"/><path d="M8 10h8M8 13.5h5"/></svg>
       <span class="pend" id="msgpend" hidden></span>
     </button>
     <div class="caption" id="caption"></div>
@@ -206,14 +229,13 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
             <h3>Brain key</h3>
             <p class="hint">A free Gemini key from aistudio.google.com. It is saved only on this phone.</p>
             <form class="krow" id="keyform"><input class="field" id="key" type="password" autocomplete="off" placeholder="Paste your key" aria-label="Gemini API key"><button class="btn primary">Save</button></form>
-            <div class="srow"><span class="keystate" id="keystate"></span><button class="btn quiet" id="forget" type="button">Forget</button></div>
+            <div class="srow"><span class="keystate" id="keystate"></span><button class="link" id="forget" type="button">Forget key</button></div>
           </section>
           <section>
             <h3>Emotion model</h3>
             <p class="hint">Reads feelings in everyday English. About 120 MB, kept on this phone. Best on Wi-Fi.</p>
-            <div class="mtrack" aria-hidden="true"><i id="mbar"></i></div>
-            <div class="srow"><span class="keystate" id="mstate">Not downloaded.</span>
-              <span style="display:flex;gap:6px"><button class="btn primary" id="mload" type="button">Download</button><button class="btn quiet" id="mforget" type="button" hidden>Remove</button></span></div>
+            <div class="mrow"><div class="mtrack" aria-hidden="true"><i id="mbar"></i></div><button class="btn primary" id="mload" type="button">Download</button></div>
+            <div class="srow"><span class="keystate" id="mstate">Not downloaded.</span><button class="link" id="mforget" type="button" hidden>Remove</button></div>
           </section>
         </div>
         <section class="people">
@@ -223,7 +245,9 @@ html,body{height:100%;margin:0;background:#080a0e;color:#f3f5f8;overflow:hidden;
           <form class="prow" id="personform">
             <input class="field" id="pname" autocomplete="off" placeholder="Name" aria-label="Name">
             <input class="field" id="prole" autocomplete="off" placeholder="Who, e.g. cook, mother" aria-label="Who they are">
-            <select class="field" id="plang" aria-label="Language"><option>Marathi</option><option>Hindi</option><option>English</option></select>
+            <div class="plangs" role="group" aria-label="Languages they speak">
+              <label><input type="checkbox" value="Marathi">Marathi</label><label><input type="checkbox" value="Hindi">Hindi</label><label><input type="checkbox" value="English">English</label>
+            </div>
             <button class="btn primary">Add</button>
           </form>
           <span class="keystate" id="pstate"></span>
@@ -397,7 +421,7 @@ function render(){
   else { fb.setAttribute("role","button"); fb.setAttribute("tabindex","0"); fb.setAttribute("aria-label","Back to TODO"); }
   let h="";
   if(ui.view==="lists"){
-    h+=`<div class="bar"><span class="name"></span><button class="btn" data-a="newlist">${I.plus} New list</button></div><div class="scroll"><div class="grid">`;
+    h+=`<div class="bar"><span class="name"></span></div><div class="scroll"><div class="grid">`;
     for(const l of data.lists){
       const peek=left(l).slice(0,2).map(i=>i.text).join(" · ");
       h+=`<button class="card" data-a="open" data-id="${l.id}"><h3>${esc(l.title)}</h3><div class="peek">${peek?esc(peek):"All done"}</div>${progress(l)}</button>`;
@@ -424,7 +448,7 @@ function render(){
   }
   if(ui.view==="play"&&cur()){
     const l=cur(), todo=left(l), it=todo[ui.step], n=l.items.length, d=n-todo.length;
-    h+=`<div class="bar"><button class="ib" data-a="stop" aria-label="Stop playing">${I.back}</button><span class="name">${esc(l.title)}</span></div><div class="play">`;
+    h+=`<div class="bar"><button class="ib" data-a="stop" aria-label="Stop playing">${I.back}</button><span class="name">${esc(l.title)}</span></div><div class="playview">`;
     if(it){
       h+=`<div class="stepno">${d+1} of ${n}</div><div class="now">${esc(it.text)}</div><span class="track"><i style="width:${n?d/n*100:0}%"></i></span>
         <div class="ctl"><button class="btn" data-a="pback" ${ui.step?"":"disabled"}>Back</button><button class="btn" data-a="pskip">Skip</button><button class="btn primary" data-a="pdone">${I.check} Done</button></div>`;
@@ -445,7 +469,7 @@ function render(){
         <div class="mtext">${esc(m.text)}</div>${stat}</button>
         <button class="ib del" data-a="msgdel" data-id="${m.id}" aria-label="Delete message">${I.del}</button></div>`;
     }
-    if(!list.length) h+=`<div class="empty">No messages yet. Tap the mic and say: tell the cook to make poha tomorrow.</div>`;
+    if(!list.length) h+=`<div class="mempty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z"/></svg><b>No messages right now</b><span>Tap the mic and say something like “Tell the cook to make poha tomorrow.”</span></div>`;
     h+=`</div></div>`;
   }
   if(ui.confirm) h+=`<div class="sheet"><div class="box"><h4>${esc(ui.confirm.title)}</h4><p>${esc(ui.confirm.body)}</p><div class="acts"><button class="btn" data-a="cancel">Keep it</button><button class="btn primary" style="background:var(--danger);border-color:var(--danger)" data-a="confirm">Remove</button></div></div></div>`;
@@ -669,6 +693,9 @@ function runTool(name,a){
 const MSG_KEY="todo-messages-v1", PEOPLE_KEY="todo-people-v1", DELIVERED_KEEP_H=3, DEFAULT_VALID_H=24;
 let msgs; try{ msgs=JSON.parse(localStorage.getItem(MSG_KEY)||"null")||{list:[],nextId:1}; }catch(e){ msgs={list:[],nextId:1}; }
 let people; try{ people=JSON.parse(localStorage.getItem(PEOPLE_KEY)||"null")||[]; }catch(e){ people=[]; }
+// One person can speak several languages. Older entries kept a single "lang".
+const langsOf=p=>Array.isArray(p.langs)?p.langs:(p.lang?[p.lang]:[]);
+people.forEach(p=>{ if(!Array.isArray(p.langs)){ p.langs=langsOf(p); delete p.lang; } });
 const saveMsgs=()=>{ try{ localStorage.setItem(MSG_KEY,JSON.stringify(msgs)); }catch(e){} };
 const savePeople=()=>{ try{ localStorage.setItem(PEOPLE_KEY,JSON.stringify(people)); }catch(e){} };
 const ago=t=>{ const m=Math.round((Date.now()-t)/60000); return m<1?"just now":m<60?m+" min ago":Math.round(m/60)+" h ago"; };
@@ -719,7 +746,7 @@ const MSG_TOOLS=[
   {name:"delete_message",description:"Delete a message, e.g. when the sender cancels it.",parameters:{type:"OBJECT",properties:{id:{type:"NUMBER"}},required:["id"]}},
   {name:"list_messages",description:"All messages currently kept, for the person managing the house.",parameters:{type:"OBJECT",properties:{}}},
   {name:"get_people",description:"The people TODO knows: names, who they are, their language.",parameters:{type:"OBJECT",properties:{}}},
-  {name:"add_person",description:"Remember a new person when introduced, e.g. this is Sunita, our cook.",parameters:{type:"OBJECT",properties:{name:{type:"STRING"},role:{type:"STRING"},language:{type:"STRING"}},required:["name"]}}
+  {name:"add_person",description:"Remember a new person when introduced, e.g. this is Sunita, our cook. A person can speak several languages.",parameters:{type:"OBJECT",properties:{name:{type:"STRING"},role:{type:"STRING"},languages:{type:"ARRAY",items:{type:"STRING"},description:"Every language they speak, e.g. Marathi, Hindi"}},required:["name"]}}
 ];
 function runMsgTool(name,a){
   a=a||{}; fadeMessages(true);
@@ -746,10 +773,11 @@ function runMsgTool(name,a){
   if(name==="delete_message"){ const n=msgs.list.length; msgs.list=msgs.list.filter(m=>m.id!==+a.id); saveMsgs(); updateMsgDot(); if(ui.view==="messages") render();
     return {ok:msgs.list.length<n}; }
   if(name==="list_messages") return {ok:true,messages:msgs.list.map(msgView)};
-  if(name==="get_people") return {ok:true,people:people.map(p=>({name:p.name,role:p.role,language:p.lang}))};
+  if(name==="get_people") return {ok:true,people:people.map(p=>({name:p.name,role:p.role,languages:langsOf(p)}))};
   if(name==="add_person"){ const nm=String(a.name||"").trim(); if(!nm) return {ok:false,error:"missing_name"};
     if(findPerson(nm)) return {ok:true,already_known:true};
-    people.push({id:Date.now(),name:nm,role:String(a.role||"").trim(),lang:String(a.language||"").trim(),voice:false}); savePeople(); renderPeople();
+    const ls=(Array.isArray(a.languages)?a.languages:(a.language?[a.language]:[])).map(x=>String(x).trim()).filter(Boolean);
+    people.push({id:Date.now(),name:nm,role:String(a.role||"").trim(),langs:ls,voice:false}); savePeople(); renderPeople();
     return {ok:true,added:nm}; }
   return null;
 }
@@ -758,7 +786,8 @@ const MSG_RULES="You also pass messages between the people of the house, includi
   "When someone asks whether there is a message for them, or asks what to do or what to cook today, find out who they are (they may tell you, or ask), call get_messages for them, "+
   "say each message faithfully with every detail in the language they are speaking now, translating if needed, and then call mark_delivered. "+
   "If they did not understand, repeat it, in another language if they ask. Never invent a message and never tell one person's message to someone it is not for. ";
-function peopleLine(){ return people.length?" People you know: "+people.map(p=>p.name+(p.role?" ("+p.role+")":"")+(p.lang?", speaks "+p.lang:"")).join("; ")+".":""; }
+function peopleLine(){ return people.length?" People you know: "+people.map(p=>p.name+(p.role?" ("+p.role+")":"")+(langsOf(p).length?", speaks "+langsOf(p).join(" and "):"")).join("; ")+
+  ". Someone who speaks several languages may use any of them; always answer in the one they are using right now.":""; }
 
 /* ---------- people in settings, with a voice sample kept on the phone ---------- */
 function vdb(){ return new Promise((res,rej)=>{ const r=indexedDB.open("todo-voices",1); r.onupgradeneeded=()=>r.result.createObjectStore("v"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
@@ -783,7 +812,7 @@ async function recordVoice(p){
 async function playVoice(p){ const b=await vget(p.id); if(!b) return; const a=new Audio(URL.createObjectURL(b)); a.play().catch(()=>{}); }
 function renderPeople(){
   const el=document.getElementById("peoplelist"); if(!el) return;
-  el.innerHTML=people.length?people.map(p=>`<div class="pitem"><div class="pname">${esc(p.name)}<span>${esc([p.role,p.lang].filter(Boolean).join(" · ")||"—")}${p.voice?" · voice saved":""}</span></div>
+  el.innerHTML=people.length?people.map(p=>`<div class="pitem"><div class="pname">${esc(p.name)}<span>${esc([p.role,langsOf(p).join(", ")].filter(Boolean).join(" · ")||"—")}${p.voice?" · voice saved":""}</span></div>
     <button class="btn" type="button" data-p="rec" data-id="${p.id}">${p.voice?"Re-record voice":"Record voice"}</button>
     ${p.voice?`<button class="btn quiet" type="button" data-p="play" data-id="${p.id}">Play</button>`:""}
     <button class="btn quiet" type="button" data-p="del" data-id="${p.id}" aria-label="Remove ${esc(p.name)}">Remove</button></div>`).join("")
@@ -797,8 +826,9 @@ document.getElementById("peoplelist").addEventListener("click",e=>{
 });
 document.getElementById("personform").onsubmit=e=>{ e.preventDefault();
   const nm=$("#pname").value.trim(); if(!nm){ $("#pstate").textContent="Add a name first."; return; }
-  people.push({id:Date.now(),name:nm,role:$("#prole").value.trim(),lang:$("#plang").value,voice:false}); savePeople();
-  $("#pname").value=""; $("#prole").value=""; $("#pstate").textContent=nm+" added."; renderPeople(); };
+  const ls=[...document.querySelectorAll(".plangs input:checked")].map(x=>x.value);
+  people.push({id:Date.now(),name:nm,role:$("#prole").value.trim(),langs:ls,voice:false}); savePeople();
+  $("#pname").value=""; $("#prole").value=""; document.querySelectorAll(".plangs input").forEach(x=>x.checked=false); $("#pstate").textContent=nm+" added."; renderPeople(); };
 renderPeople(); fadeMessages(true); setInterval(()=>fadeMessages(false),60000);
 
 const LIST_RULES="You manage the family's lists only through your tools. "+
@@ -906,7 +936,7 @@ async function think(text,real){
   if(res&&res.err){ F.flash("apologetic",2.2); say(res.err); return; }
   if(res&&res.text) say(clean(res.text).replace(/\s+/g," ").trim());
 }
-function showKey(){ const k=getKey(), el=$("#keystate");
+function showKey(){ const k=getKey(), el=$("#keystate"); $("#forget").hidden=!k;
   if(k){ el.textContent="Saved on this phone (…"+k.slice(-4)+")."; el.className="keystate ok"; }
   else { el.textContent="No key yet."; el.className="keystate"; } }
 
