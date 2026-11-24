@@ -1,0 +1,22 @@
+[I01] FAIL  > सुनीता को बोलना कल आलू पराठे बनाना।
+   < सुनीता को बता दिया है कि कल आलू पराठे बनाने हैं।
+   ! reply has none of /कौन|नाम|आप कौन/
+[I01] FAIL  > मैं अंजली हूँ।
+   < नमस्ते अंजली, बताइए आज मैं आपकी क्या मदद करूँ?
+   ! no message matching {"from":"/Anjali|अंजली/","to":"/Sunita|सुनीता/"}
+[I02] ok  > Anjali here. Tell Raju to come at 4.
+   < राजूला सांगते की चार वाजता यायचे.
+[I02] FAIL  > Is there a message for me?
+   < अंजली ने कहा है कि आपको ४ बजे आना है। सब ठीक है।
+   ! reply language latin expected, devanagari share 1.00 | reply has none of /who|name/i
+[I02] FAIL  > I'm Raju.
+   < नमस्ते राजू, मैंने आपको अंजली जी का संदेश दे दिया है।
+   ! reply missing /4|four/i
+[I03] FAIL  > I'm Anjali. Tell her to make tea.
+   < I have told Sunita to make tea.
+   ! reply has none of /who|whom|which|कोण/i | expected 0 messages, have 1
+[I04] FAIL  > मी अंजली. त्यांना सांग उद्या लवकर या.
+   < नक्कीच अंजली, मी त्यांना उद्या लवकर यायला सांगते.
+   ! reply has none of /कोणाला|कोणाला सांगू|कोण/ | expected 0 messages, have 1
+[I05] ok  > Rahul here. Tell Kamla to clean the study.
+   < I have told Kamla to clean the study.

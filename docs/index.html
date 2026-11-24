@@ -1992,31 +1992,110 @@ const dur=ms=>{ const m=Math.max(0,Math.round(ms/60000)); return m<60?m+" min":M
 const clock=t=>new Date(t).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
 function fadeMessages(quiet){
   const t=Date.now(), n=msgs.list.length;
-  msgs.list=msgs.list.filter(m=>m.delivered_at?t<m.delivered_at+DELIVERED_KEEP_H*3600e3:t<m.expires);
+  msgs.faded=(msgs.faded||[]).filter(f=>t<f.faded_at+24*3600e3);   // who/when only, no text, kept a day
+  msgs.list=msgs.list.filter(m=>{ const keep=m.delivered_at?t<m.delivered_at+DELIVERED_KEEP_H*3600e3:t<m.expires;
+    if(!keep&&m.delivered_at) msgs.faded.push({id:m.id,from:m.from,to:m.to,to_id:m.to_id||null,delivered_at:m.delivered_at,faded_at:t});
+    return keep; });
   if(msgs.list.length!==n){ saveMsgs(); if(!quiet&&ui.view==="messages") render(); }
   updateMsgDot();
 }
 function updateMsgDot(){ const el=document.getElementById("msgpend"); if(el) el.hidden=!msgs.list.some(m=>!m.delivered_at); }
-// The same person can be named, or called by role, in three languages.
-const ROLE_GROUPS=[["cook","maid","bai","maushi","mavshi","kaki","kaamwali","kamwali","maharaj","helper","stafu","बाई","मावशी","स्वयंपाक","कुक","मेड","महाराज","कामवाली"],
-  ["mother","mom","mummy","mumma","aai","maa","amma","आई","माँ","मम्मी"],["father","dad","papa","baba","पापा","बाबा","वडील"],
+// The same person can be named, or called by role, in three languages and two scripts.
+// "bai"/"मावशी" can mean the cook or the maid: it only resolves when the house has exactly one of them.
+const ROLE_GROUPS=[
+  ["cook","maharaj","स्वयंपाक","स्वयंपाकी","कुक","महाराज","खाना बनाने वाली","खाना बनाने वाला","rasoiya","रसोइया"],
+  ["maid","kaamwali","kamwali","kaamwaali","मेड","कामवाली","काम वाली","helper","हेल्पर","cleaner"],
+  ["bai","maushi","mavshi","मावशी","बाई","staff","stafu"],
+  ["mother","mom","mummy","mumma","aai","maa","amma","आई","माँ","मम्मी","मां","madam","मैडम","मॅडम","memsaab","मेमसाब","ताई","ताईं","tai","didi","दीदी","bhabhi","वहिनी","vahini"],["father","dad","papa","baba","पापा","बाबा","वडील"],
   ["grandmother","grandma","aaji","dadi","nani","आजी","दादी","नानी"],["grandfather","grandpa","aajoba","dada","nana","आजोबा","दादा","नाना"],
-  ["driver","ड्रायवर","ड्राइवर"]];
-const pnorm=x=>String(x||"").toLowerCase().replace(/[’'.,!?]/g,"").replace(/\s+/g," ").trim().replace(/^(the|our|my)\s+/,"").replace(/\s*(ji|जी|tai|ताई)$/,"");
-function findPerson(x){ const q=pnorm(x); if(!q) return null;
-  return people.find(p=>pnorm(p.name)===q)||people.find(p=>p.role&&pnorm(p.role)===q)
-    ||people.find(p=>q.split(" ").includes(pnorm(p.name)))||people.find(p=>p.role&&q.includes(pnorm(p.role)))||null; }
-function whoKey(x){
-  const p=findPerson(x); if(p) return "p"+p.id;
-  const q=pnorm(x);
-  for(let i=0;i<ROLE_GROUPS.length;i++) if(ROLE_GROUPS[i].some(w=>q===w||q.split(" ").includes(w))){
-    const r=people.find(pp=>pp.role&&ROLE_GROUPS[i].some(w=>pnorm(pp.role).split(" ").includes(w)));
-    return r?"p"+r.id:"g"+i; }
-  return "n"+q;
+  ["driver","ड्रायवर","ड्राइवर"],["son","मुलगा","बेटा","beta"],["daughter","मुलगी","बेटी","beti"],["watchman","वॉचमन","चौकीदार","security"]];
+const STAFF_GROUP=2;   // staff call the lady of the house ताई or madam: those sit in the mother group   // matches whoever is cook or maid
+const TITLES=["ji","जी","tai","ताई","didi","दीदी","madam","mam","maam","मैडम","मॅडम","memsaab","मेमसाब","sahab","saheb","साहब","साहेब","sir","सर","bhaiya","भैया","dada","kaka","kaki","काका","काकी","mavshi","मावशी","maushi"];
+const STOP=["the","our","my","to","for","ko","la","को","ला","ना","se","से","please"];
+const CASE_END=/ं?(ला|ना|नी|ची|चा|चे|ने|को|के|की|से|ले|लाही)$/;
+const PRONOUNS=/^(her|him|them|they|he|she|it|उसे|उसको|उन्हें|उनको|त्यांना|त्याला|तिला|त्यांनी|ise|use|unhe|unko|usko|tila|tyala|tyanna)$/i;
+// Light romanisation of Devanagari, then a loose key, so सुनीता = Sunita and आरव = Aarav.
+const DV_V={"अ":"a","आ":"a","इ":"i","ई":"i","उ":"u","ऊ":"u","ए":"e","ऐ":"ai","ओ":"o","औ":"au","ऋ":"ri","ऑ":"o","ॲ":"a"};
+const DV_M={"ा":"a","ि":"i","ी":"i","ु":"u","ू":"u","े":"e","ै":"ai","ो":"o","ौ":"au","ृ":"ri","ॉ":"o","ॅ":"a"};
+const DV_C={"क":"k","ख":"kh","ग":"g","घ":"gh","ङ":"n","च":"ch","छ":"chh","ज":"j","झ":"jh","ञ":"n","ट":"t","ठ":"th","ड":"d","ढ":"dh","ण":"n","त":"t","थ":"th","द":"d","ध":"dh","न":"n",
+  "प":"p","फ":"ph","ब":"b","भ":"bh","म":"m","य":"y","र":"r","ल":"l","ळ":"l","व":"v","श":"sh","ष":"sh","स":"s","ह":"h","क्ष":"ksh","ज्ञ":"gy"};
+function roman(s){ s=String(s||"").replace(/़/g,""); let o="";
+  for(let i=0;i<s.length;i++){ const c=s[i], n=s[i+1];
+    if(DV_V[c]) o+=DV_V[c];
+    else if(DV_C[c]){ o+=DV_C[c]; if(n==="्") i++; else if(DV_M[n]){ o+=DV_M[n]; i++; } else if(n&&(DV_C[n]||n==="ं"||n==="ँ")) o+="a"; else if(!n||/\s/.test(n)) o+=""; else o+="a"; }
+    else if(DV_M[c]) o+=DV_M[c];
+    else if(c==="ं"||c==="ँ") o+="n";
+    else if(c==="ः"||c==="्") {}
+    else o+=c; }
+  return o; }
+const lkey=w=>roman(w).toLowerCase().replace(/[^a-z]/g,"").replace(/w/g,"v").replace(/ee|ii/g,"i").replace(/oo|uu/g,"u").replace(/([bcdgjkpt])h/g,"$1").replace(/sh/g,"s").replace(/(.)\1+/g,"$1").replace(/a/g,"a").replace(/(?!^)a(?=$)/,"a");
+// consonant skeleton (first letter kept): last-resort match for schwa differences (अंजली "anjli"/Anjali)
+const skel=w=>{ const k=lkey(w); return k.charAt(0)+k.slice(1).replace(/[aeiou]/g,""); };
+const pnorm=x=>String(x||"").toLowerCase().replace(/[’'.,!?।"]/g," ").replace(/\s+/g," ").trim();
+function stripGlued(w){   // "अंजलीताई" -> "अंजली", "सुनीताजी" -> "सुनीता", but "आजी" and "aaji" stay
+  for(const t of TITLES) if(w.length>t.length&&w.endsWith(t)&&w.length-t.length>=3) return w.slice(0,-t.length);
+  return w; }
+function variants(w){ const v=new Set([w]); const g=stripGlued(w); v.add(g);
+  for(const x of [w,g]){ const c=x.replace(CASE_END,""); if(c!==x&&c.length>=2) { v.add(c); v.add(stripGlued(c)); } }
+  return [...v]; }
+function nameTokens(q){ let t=pnorm(q).split(" ").filter(w=>w&&!STOP.includes(w));
+  const nt=t.filter(w=>!TITLES.includes(w)); return nt.length?nt:t; }
+const roleTokens=p=>pnorm(p.role).split(/[ ,/&]+/).filter(Boolean);
+const inGroup=(p,i)=>{ const r=pnorm(p.role); if(!r) return false;
+  const ids=i===STAFF_GROUP?[0,1]:[i];
+  return ids.some(j=>ROLE_GROUPS[j].some(w=>r===w||roleTokens(p).includes(w)||(w.includes(" ")&&r.includes(w)))); };
+// -> {people:[...], how:"name"|"role"|"none"}
+function resolvePeople(x){
+  const q=pnorm(x); if(!q) return {people:[],how:"none"};
+  const toks=nameTokens(q);
+  // 1. by name, exact then romanised then skeleton
+  for(const eq of [(a,b)=>a===b,(a,b)=>lkey(a)===lkey(b)&&lkey(a).length>=2,(a,b)=>skel(a)===skel(b)&&skel(a).length>=3]){
+    const hit=people.filter(p=>{ const pn=pnorm(p.name).split(" ");
+      return toks.some(w=>variants(w).some(v=>pn.some(n=>eq(v,n))))||eq(toks.join(""),pn.join("")); });
+    if(hit.length) return {people:hit,how:"name"}; }
+  // 2. by the person's own role text ("cook", "son")
+  const byRole=people.filter(p=>p.role&&(pnorm(p.role)===q||pnorm(p.role)===toks.join(" ")));
+  if(byRole.length) return {people:byRole,how:"role"};
+  // 3. by role group in any language
+  const words=new Set(); toks.forEach(w=>variants(w).forEach(v=>words.add(v)));
+  for(let i=0;i<ROLE_GROUPS.length;i++) if(ROLE_GROUPS[i].some(w=>words.has(w)||q===w||(w.includes(" ")&&q.includes(w)))){
+    return {people:people.filter(p=>inGroup(p,i)),how:"role",group:i}; }
+  return {people:[],how:"none"};
 }
-const samePerson=(a,b)=>whoKey(a)===whoKey(b);
+function findPerson(x){ const r=resolvePeople(x); return r.people.length===1?r.people[0]:null; }
+function whoKey(x){
+  const r=resolvePeople(x); if(r.people.length===1) return "p"+r.people[0].id;
+  if(r.how==="role"&&r.group!==undefined) return "g"+r.group;
+  return "n"+pnorm(x);
+}
+const samePerson=(a,b)=>{ if(whoKey(a)===whoKey(b)) return true;   // unknown people: "Mohan the electrician" is Mohan
+  const ka=nameTokens(a).map(lkey).filter(k=>k.length>=3), kb=nameTokens(b).map(lkey).filter(k=>k.length>=3);
+  return !findPerson(a)&&!findPerson(b)&&ka.length>0&&kb.length>0&&ka[0]===kb[0]; };
+const splitRecipients=to=>(Array.isArray(to)?to:String(to||"").split(/\s*(?:,|&|\band\b|\baur\b|\bani\b|आणि|और|व)\s+|\s*,\s*/i)).map(s=>String(s).trim()).filter(Boolean);
+const isMsgFor=(m,p)=>m.to_id?m.to_id===p.id:samePerson(m.to.replace(/\s*\(.*\)$/,""),p.name);
+const personLabel=p=>p.name+(p.role?" ("+p.role+")":"");
+// "until": an end time said in words, resolved here, not by the model.
+function untilTime(u,now){
+  const s=pnorm(u); if(!s) return null; const d=new Date(now), at=(h,m,plus)=>{ const x=new Date(d); x.setDate(x.getDate()+(plus||0)); x.setHours(h,m,0,0); return x.getTime(); };
+  let m=/(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm|baje|बजे|वाजता)?/.exec(s);
+  if(/tomorrow|kal|उद्या|कल/.test(s)) return at(23,59,1);
+  // a part of today said in words wins over any clock time beside it, and never rolls over to tomorrow
+  if(/morning|subah|सकाळ|सुबह/.test(s)) return Math.max(now+15*60e3,at(12,0));
+  if(/afternoon|dopahar|दुपार|दोपहर/.test(s)) return Math.max(now+15*60e3,at(17,0));
+  if(/evening|shaam|sham|संध्याकाळ|शाम/.test(s)) return Math.max(now+15*60e3,at(21,0));
+  if(/today|tonight|aaj|raat|आज|रात/.test(s)) return Math.max(now+15*60e3,at(23,59));
+  if(m){ let h=+m[1], mi=+(m[2]||0); if(m[3]==="pm"&&h<12) h+=12; if(m[3]==="am"&&h===12) h=0;
+    if(!m[3]&&!m[2]&&h<8) h+=12;   // "5" alone in a house means 5 pm
+    let t=at(h,mi); if(t<=now) t+=24*3600e3; return t; }
+  if(/morning|subah|सकाळ|सुबह/.test(s)) return at(12,0);
+  if(/afternoon|dopahar|दुपार|दोपहर/.test(s)) return at(17,0);
+  if(/evening|shaam|sham|संध्याकाळ|शाम/.test(s)) return at(21,0);
+  if(/today|tonight|aaj|raat|आज|रात/.test(s)) return at(23,59);
+  return null;
+}
 const msgView=m=>({id:m.id,from:m.from,to:m.to,message:m.text,left_at:clock(m.created),delivered:!!m.delivered_at,
   fades_in:dur((m.delivered_at?m.delivered_at+DELIVERED_KEEP_H*3600e3:m.expires)-Date.now())});
+const msgMeta=m=>({id:m.id,from:m.from,to:m.to,left_at:clock(m.created),delivered:!!m.delivered_at});
 function showMsgChange(){
   if(ui.view==="home"||ui.byTool){ ui.byTool=true; go("messages"); } else render();
   clearTimeout(toolBack);
@@ -2025,56 +2104,100 @@ function showMsgChange(){
 function speakMessage(m){ const line="Message from "+m.from+" for "+m.to+": "+m.text;
   $("#caption").textContent=line; if(typeof live!=="undefined"&&live.on) stopPlayback(); shush(); speakReply(line); }
 
+/* A turn's message changes are held until its reply is really given: a busy or
+   failed turn rolls them back, and "delivered" is only set once the words went out. */
+const turn={snap:null,deliver:[]};
+function turnBegin(){ turn.snap=JSON.stringify(msgs); turn.deliver=[]; }
+function turnRollback(){ if(turn.snap!==null){ msgs=JSON.parse(turn.snap); saveMsgs(); updateMsgDot(); } turn.snap=null; turn.deliver=[]; }
+function turnCommit(){ const t=Date.now();
+  for(const m of msgs.list) if(turn.deliver.includes(m.id)&&!m.delivered_at) m.delivered_at=t;
+  turn.snap=null; turn.deliver=[]; saveMsgs(); updateMsgDot(); try{ if(ui.view==="messages") render(); }catch(e){} }
+
 const MSG_TOOLS=[
-  {name:"leave_message",description:"Save a message one person wants passed on to another. Use when someone says tell X, remind X, pass on to X, X should do something, and the like.",parameters:{type:"OBJECT",properties:{
-    from:{type:"STRING",description:"Who is leaving it, name or role, e.g. Anjali"},to:{type:"STRING",description:"Who it is for, name or role, e.g. the cook"},
+  {name:"leave_message",description:"Save a message one person wants passed on to another. Use when someone says tell X, remind X, pass on to X, X should do something, and the like. Only say it is saved if this returns ok.",parameters:{type:"OBJECT",properties:{
+    from:{type:"STRING",description:"The name of the person speaking now, who is leaving it, e.g. Anjali. Never a placeholder: if you don't know, ask first."},
+    to:{type:"STRING",description:"Who it is for, name or role, e.g. Sunita or the cook. Several people may be named: Aarav and Isha. Never a pronoun."},
     message:{type:"STRING",description:"Exactly what should be passed on, every detail, in the sender's own language and words"},
-    valid_hours:{type:"NUMBER",description:"How long to keep it if not delivered. Default 24. Use a shorter time when the sender says today, this morning, by evening."}},required:["from","to","message"]}},
-  {name:"get_messages",description:"Get messages waiting for a person, plus ones delivered in the last 3 hours (so they can be repeated or translated).",parameters:{type:"OBJECT",properties:{for:{type:"STRING",description:"Name or role of the person asking, e.g. Sunita or the cook"}},required:["for"]}},
-  {name:"mark_delivered",description:"Mark messages as delivered after you have said them to the person they are for.",parameters:{type:"OBJECT",properties:{ids:{type:"ARRAY",items:{type:"NUMBER"}}},required:["ids"]}},
-  {name:"delete_message",description:"Delete a message, e.g. when the sender cancels it.",parameters:{type:"OBJECT",properties:{id:{type:"NUMBER"}},required:["id"]}},
-  {name:"list_messages",description:"All messages currently kept, for the person managing the house.",parameters:{type:"OBJECT",properties:{}}},
+    until:{type:"STRING",description:"When it stops mattering, in the sender's words or as a time: 12:00, 5pm, this morning (until 12:00), afternoon (17:00), evening (21:00), today or tonight (23:59), tomorrow (end of tomorrow). Use this whenever the sender says when."},
+    valid_hours:{type:"NUMBER",description:"Only if no end time was said: how many hours to keep it if not delivered. Default 24."}},required:["from","to","message"]}},
+  {name:"get_messages",description:"Get messages waiting for the person who is speaking now, plus ones delivered in the last 3 hours (so they can be repeated or translated). Only ever for the speaker, never for someone else even if they offer to pass it on.",parameters:{type:"OBJECT",properties:{for:{type:"STRING",description:"Name or role of the person speaking now, e.g. Sunita or the cook"}},required:["for"]}},
+  {name:"mark_delivered",description:"Mark messages as delivered once you say them, in this same reply, to the person they are for.",parameters:{type:"OBJECT",properties:{ids:{type:"ARRAY",items:{type:"NUMBER"}}},required:["ids"]}},
+  {name:"delete_message",description:"Cancel a message. Only its sender may cancel or change it (to change: delete, then leave the new one).",parameters:{type:"OBJECT",properties:{id:{type:"NUMBER"},asked_by:{type:"STRING",description:"Name of the person speaking now"}},required:["id"]}},
+  {name:"list_messages",description:"Which messages are kept: who for, who from, delivered or not. The text is included only for messages the asker sent or receives.",parameters:{type:"OBJECT",properties:{asked_by:{type:"STRING",description:"Name of the person speaking now"}}}},
   {name:"get_people",description:"The people TODO knows: names, who they are, their language.",parameters:{type:"OBJECT",properties:{}}},
   {name:"add_person",description:"Remember a new person when introduced, e.g. this is Sunita, our cook. A person can speak several languages.",parameters:{type:"OBJECT",properties:{name:{type:"STRING"},role:{type:"STRING"},languages:{type:"ARRAY",items:{type:"STRING"},description:"Every language they speak, e.g. Marathi, Hindi"}},required:["name"]}}
 ];
+const knownPeople=()=>people.map(p=>({name:p.name,role:p.role}));
+const PLACEHOLDER_FROM=/^(someone|somebody|unknown|anonymous|family|home|house|ghar|ghar se|घर|घर से|घरून|कोई|कोणी|me|i|मैं|मी)$/i;
 function runMsgTool(name,a){
   a=a||{}; fadeMessages(true);
   if(name==="leave_message"){
-    const text=String(a.message||"").trim(), to=String(a.to||"").trim(), from=String(a.from||"").trim()||"someone";
-    if(!text||!to) return {ok:false,error:"missing_message_or_recipient",hint:"Ask who it is for and what to say."};
-    const h=Math.max(.25,Math.min(168,+a.valid_hours||DEFAULT_VALID_H)), t=Date.now();
-    const pf=findPerson(from), pt=findPerson(to);
-    const m={id:msgs.nextId++,from:pf?pf.name:from,to:pt?pt.name+(pt.role?" ("+pt.role+")":""):to,text,created:t,expires:t+h*3600e3,delivered_at:null};
-    msgs.list.push(m); saveMsgs(); F.flash("happy",1.1); showMsgChange();
-    return {ok:true,saved:msgView(m),keeps_for_hours:h};
+    const text=String(a.message||"").trim(), from=String(a.from||"").trim();
+    const tos=splitRecipients(a.to);
+    if(!text||!tos.length) return {ok:false,error:"missing_message_or_recipient",hint:"Ask who it is for and what to say."};
+    if(!from||PLACEHOLDER_FROM.test(pnorm(from))) return {ok:false,error:"who_is_speaking_unknown",hint:"Nothing was saved. Ask the person their name, then save it."};
+    const pron=tos.find(t=>nameTokens(t).every(w=>PRONOUNS.test(w)));
+    if(pron) return {ok:false,error:"unclear_recipient",said:pron,people:knownPeople(),hint:"Nothing was saved. Ask who exactly it is for."};
+    const t=Date.now(), ut=untilTime(a.until,t);
+    const h=ut?Math.max(.25,(ut-t)/3600e3):Math.max(.25,Math.min(168,+a.valid_hours||DEFAULT_VALID_H));
+    const pf=findPerson(from), targets=[], unknown=[];
+    for(const to of tos){ const r=resolvePeople(to);
+      if(r.people.length>1&&r.how==="role") return {ok:false,error:"ambiguous_recipient",said:to,candidates:r.people.map(p=>({name:p.name,role:p.role})),hint:"Nothing was saved. Ask which of them it is for."};
+      if(r.people.length) r.people.forEach(p=>{ if(!targets.some(x=>x.p===p)) targets.push({p}); });
+      else { targets.push({raw:to}); unknown.push(to); } }
+    const saved=targets.map(x=>{ const m={id:msgs.nextId++,from:pf?pf.name:from,from_id:pf?pf.id:null,to:x.p?personLabel(x.p):x.raw,to_id:x.p?x.p.id:null,text,created:t,expires:t+h*3600e3,delivered_at:null};
+      msgs.list.push(m); return m; });
+    saveMsgs(); F.flash("happy",1.1); showMsgChange();
+    const res={ok:true,saved:saved.map(msgView),keeps_until:clock(t+h*3600e3),hint:"Say you will tell them when they ask; it is not delivered yet."};
+    if(unknown.length){ res.unknown_recipient=true; res.unknown=unknown; res.known_people=knownPeople();
+      res.hint="Saved, but I don't know "+unknown.join(", ")+". Check with the speaker who that is; if it is someone else in the list, delete this and save again."; }
+    return res;
   }
   if(name==="get_messages"){
     const who=String(a.for||"").trim(); if(!who) return {ok:false,error:"who_is_asking_unknown",hint:"Ask who they are first."};
-    const mine=msgs.list.filter(m=>samePerson(m.to,who)||samePerson(m.to.replace(/\s*\(.*\)$/,""),who)||(m.to.match(/\((.*)\)$/)&&samePerson(m.to.match(/\((.*)\)$/)[1],who)));
+    const r=resolvePeople(who);
+    if(r.people.length>1) return {ok:false,error:"ambiguous_person",candidates:r.people.map(p=>({name:p.name,role:p.role})),hint:"Ask the speaker their name."};
+    const p=r.people[0];
+    const mine=msgs.list.filter(m=>p?isMsgFor(m,p):samePerson(m.to,who));
+    const faded=(msgs.faded||[]).filter(f=>p?(f.to_id?f.to_id===p.id:samePerson(f.to,p.name)):samePerson(f.to,who));
     if(mine.length) showMsgChange();
-    return {ok:true,for:who,messages:mine.map(msgView),
-      hint:mine.length?"Say each waiting message faithfully, every detail, in the language the person is speaking now, translating if needed. Then call mark_delivered with their ids. If they ask again or want another language, repeat it.":"There is no message for this person. Say so; never invent one."};
+    const res={ok:true,for:p?p.name:who,messages:mine.map(msgView)};
+    if(faded.length) res.faded_earlier=faded.map(f=>({from:f.from,delivered_at:clock(f.delivered_at),faded_at:clock(f.faded_at)}));
+    res.hint=mine.length?"These are only for "+(p?p.name:who)+", the person speaking. Say each one faithfully, every detail, translated fully into the language and script of the person's latest message (English to English). Call mark_delivered with the ids of the ones you say. If they ask again or want another language, repeat it."
+      :faded.length?"Nothing is waiting now. A message was delivered earlier and has since faded; say that, do not say there was never a message."
+      :"There is no message for this person. Say so; never invent one.";
+    return res;
   }
-  if(name==="mark_delivered"){ const ids=(a.ids||[]).map(Number), done=[];
-    for(const m of msgs.list) if(ids.includes(m.id)&&!m.delivered_at){ m.delivered_at=Date.now(); done.push(m.id); }
-    saveMsgs(); updateMsgDot(); if(ui.view==="messages") render();
-    return {ok:true,delivered:done,fades_after_hours:DELIVERED_KEEP_H}; }
-  if(name==="delete_message"){ const n=msgs.list.length; msgs.list=msgs.list.filter(m=>m.id!==+a.id); saveMsgs(); updateMsgDot(); if(ui.view==="messages") render();
-    return {ok:msgs.list.length<n}; }
-  if(name==="list_messages") return {ok:true,messages:msgs.list.map(msgView)};
+  if(name==="mark_delivered"){ const ids=(a.ids||[]).map(Number).filter(id=>msgs.list.some(m=>m.id===id&&!m.delivered_at));
+    if(turn.snap===null&&!(typeof live!=="undefined"&&live.on)){ turnBegin(); turn.deliver.push(...ids); turnCommit(); }
+    else turn.deliver.push(...ids);
+    return {ok:true,delivered:ids,fades_after_hours:DELIVERED_KEEP_H}; }
+  if(name==="delete_message"){ const m=msgs.list.find(x=>x.id===+a.id); if(!m) return {ok:false,error:"no_such_message"};
+    const by=a.asked_by?resolvePeople(a.asked_by).people:[];
+    if(by.length===1){ const p=by[0], isFrom=m.from_id?m.from_id===p.id:samePerson(m.from,p.name);
+      if(!isFrom&&isMsgFor(m,p)&&!m.delivered_at) return {ok:false,error:"only_sender_can_cancel",hint:"Only "+m.from+" can cancel this message; it has not been heard yet."};
+      if(!isFrom&&!isMsgFor(m,p)) return {ok:false,error:"not_yours",hint:"Only "+m.from+" can cancel this message."}; }
+    msgs.list=msgs.list.filter(x=>x!==m); saveMsgs(); updateMsgDot(); if(ui.view==="messages") render();
+    return {ok:true,deleted:m.id}; }
+  if(name==="list_messages"){ const by=a.asked_by?resolvePeople(a.asked_by).people:[]; const p=by.length===1?by[0]:null;
+    return {ok:true,messages:msgs.list.map(m=>p&&((m.from_id?m.from_id===p.id:samePerson(m.from,p.name))||isMsgFor(m,p))?msgView(m):msgMeta(m)),
+      hint:"Message text is private: say only who each is for and from, unless the speaker sent it or it is for them."}; }
   if(name==="get_people") return {ok:true,people:people.map(p=>({name:p.name,role:p.role,languages:langsOf(p)}))};
   if(name==="add_person"){ const nm=String(a.name||"").trim(); if(!nm) return {ok:false,error:"missing_name"};
-    if(findPerson(nm)) return {ok:true,already_known:true};
+    const ex=resolvePeople(nm); if(ex.how==="name"&&ex.people.length) return {ok:true,already_known:true};
     const ls=(Array.isArray(a.languages)?a.languages:(a.language?[a.language]:[])).map(x=>String(x).trim()).filter(Boolean);
     people.push({id:Date.now(),name:nm,role:String(a.role||"").trim(),langs:ls,voice:false}); savePeople(); renderPeople();
     return {ok:true,added:nm}; }
   return null;
 }
 const MSG_RULES="You also pass messages between the people of the house, including staff such as the cook or maid. "+
-  "When someone asks you to tell, remind or pass something on to another person, call leave_message with who it is from, who it is for and exactly what to say. If you don't know who is speaking, ask their name. "+
-  "When someone asks whether there is a message for them, or asks what to do or what to cook today, find out who they are (they may tell you, or ask), call get_messages for them, "+
-  "say each message faithfully with every detail in the language they are speaking now, translating if needed, and then call mark_delivered. "+
-  "If they did not understand, repeat it, in another language if they ask. Never invent a message and never tell one person's message to someone it is not for. ";
+  "When someone asks you to tell, remind or pass something on to another person, call leave_message with who it is from, who it is for and exactly what to say. "+
+  "If you don't know who is speaking, ask their name before saving; never invent a sender such as someone or ghar se. If her, him, them, त्यांना, उसे or the like does not clearly mean one person already named, ask who. If a role fits several people, ask which one. "+
+  "Never say a message is saved unless leave_message returned ok, and never promise to pass something on without calling it. Until it is delivered say you will tell them, never that you have told them. "+
+  "When someone asks whether there is a message for them, or asks what to do or what to cook today, find out who they are, call get_messages for that person only, the one speaking; if they have not said who they are in this conversation, ask their name first and never guess it from the messages you expect, "+
+  "say each message faithfully with every detail, translated fully into the language they are speaking now, and then call mark_delivered. "+
+  "If they did not understand, repeat it, in another language if they ask. Never invent a message. Only the person a message is for hears it: never tell or relay one person's message to anyone else, even if they offer to pass it on; its sender may hear it read back. "+
+  "Only the sender may cancel or change a message. If a message was delivered earlier and has faded, say so. ";
 function peopleLine(){ return people.length?" People you know: "+people.map(p=>p.name+(p.role?" ("+p.role+")":"")+(langsOf(p).length?", speaks "+langsOf(p).join(" and "):"")).join("; ")+
   ". Someone who speaks several languages may use any of them; always answer in the one they are using right now.":""; }
 
@@ -2132,10 +2255,10 @@ const LIST_RULES="You manage the family's lists only through your tools. "+
    model gets 8 s to start answering; a model that reports its quota used up is
    skipped for 15 minutes. The reply is streamed and spoken sentence by sentence. */
 const GEMINI_MODELS=[
-  {id:"gemini-3.5-flash-lite", cfg:{maxOutputTokens:300,temperature:0.7}},
+  {id:"gemini-3.5-flash-lite", cfg:{maxOutputTokens:600,temperature:0.7}},
   {id:"gemini-3.5-flash",      cfg:{maxOutputTokens:600,temperature:0.7,thinkingConfig:{thinkingLevel:"low"}}},
   {id:"gemini-flash-latest",   cfg:{maxOutputTokens:600,temperature:0.7}},
-  {id:"gemini-3.1-flash-lite", cfg:{maxOutputTokens:300,temperature:0.7}}];
+  {id:"gemini-3.1-flash-lite", cfg:{maxOutputTokens:600,temperature:0.7}}];
 const skipUntil={};
 let convo=[];
 function persona(){
@@ -2143,7 +2266,7 @@ function persona(){
   return "You are TODO, the warm home helper of an Indian family who speak Marathi, Hindi and English. Your name is TODO; never call yourself a bot, an assistant or anything else. "+
     "You live on a small screen with an expressive face, and everything you write is spoken aloud. "+
     "Reply in one to three short sentences. No markdown, no lists, no emoji, no symbols. "+
-    "Always answer in the language the person just spoke: Marathi to Marathi, Hindi to Hindi, English to English. Never switch language in the middle of an answer. Write Marathi and Hindi in Devanagari. Mix Hindi or Marathi with English only if they mixed it themselves. Decide the language from how the sentence is built, not from single words: an English sentence that contains Indian names or words like Aaji, atta, ghee or tulsi is English and gets an English answer. "+
+    "Always answer in the language the person just spoke: Marathi to Marathi, Hindi to Hindi, English to English. Never switch language in the middle of an answer. Go by their latest message only, not by the languages a person is known to speak: English gets plain English; Devanagari gets Devanagari; only a message that is itself Hindi or Marathi typed in Latin letters (like kya message hai) gets the same romanised Latin letters back. Mix Hindi or Marathi with English only if they mixed it themselves. Decide the language from how the sentence is built, not from single words: an English sentence that contains Indian names or words like Aaji, atta, ghee or tulsi is English and gets an English answer. "+
     "Be kind and practical. "+LIST_RULES+MSG_RULES+
     "Today is "+new Date().toDateString()+", time "+clock(Date.now())+". The lists are: "+data.lists.map(l=>l.title).join(", ")+"."+peopleLine();
 }
@@ -2160,6 +2283,7 @@ async function streamBrain(text,onSentence){
   for(const {id,cfg} of GEMINI_MODELS){
     if((skipUntil[id]||0)>Date.now()) continue;
     convo.length=mark+1;   // a model that failed half way leaves nothing behind
+    turnRollback(); turnBegin();   // and neither do its message changes
     let rounds=0, spoke="";
     for(;;){   // one request, plus one more after each round of tool calls
       const ctl=new AbortController(); let tm=setTimeout(()=>ctl.abort(),8000);   // 8 s to start answering
@@ -2168,9 +2292,9 @@ async function streamBrain(text,onSentence){
         r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+id+":streamGenerateContent?alt=sse",{
           method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","x-goog-api-key":key},
           body:JSON.stringify({systemInstruction:{parts:[{text:persona()}]},contents:convo,generationConfig:cfg,tools:[{functionDeclarations:LIST_TOOLS.concat(MSG_TOOLS)}]})});
-      }catch(e){ clearTimeout(tm); if(navigator.onLine===false){ convo.length=mark; return {err:"I'm offline right now."}; } r=null; }
+      }catch(e){ clearTimeout(tm); if(navigator.onLine===false){ convo.length=mark; turnRollback(); return {err:"I'm offline right now."}; } r=null; }
       if(!r||r.status===404||r.status>=500||r.status===429){ clearTimeout(tm); if(r&&r.status===429) skipUntil[id]=Date.now()+15*60*1000; busy=true; break; }
-      if(!r.ok){ clearTimeout(tm); convo.length=mark;
+      if(!r.ok){ clearTimeout(tm); convo.length=mark; turnRollback();
         return {err:(r.status===400||r.status===401||r.status===403)?"That Gemini key didn't work. Check it in settings.":"My brain had a problem. Please try again."}; }
       let full="", pending="", buf="", calls=[];
       try{
@@ -2205,10 +2329,11 @@ async function streamBrain(text,onSentence){
       }
       if(!spoke.trim()){ busy=true; break; }
       convo.push({role:"model",parts:[{text:clean(full||spoke).trim()}]});
+      turnCommit();   // the reply was given: its message changes and deliveries stand
       return {text:spoke};
     }
   }
-  convo.length=mark;
+  convo.length=mark; turnRollback();
   return {err:busy?"Google's AI is very busy right now. Ask me again in a minute.":"I couldn't find a working AI model. Please try again later."};
 }
 async function think(text,real){
@@ -2301,6 +2426,7 @@ async function liveStart(){
 function stopPlayback(){ for(const s of live.sources){ try{ s.stop(); }catch(e){} } live.sources=[]; live.playAt=0; try{ F.hush(); }catch(e){} }
 function liveStop(){
   live.on=false;
+  if(turn.snap!==null){ if(live.gotAudio) turnCommit(); else turnRollback(); }
   try{ if(live.ws){ const w=live.ws; live.ws=null; w.close(1000); } }catch(e){}
   try{ live.node&&live.node.disconnect(); live.src&&live.src.disconnect(); }catch(e){}
   try{ live.stream&&live.stream.getTracks().forEach(t=>t.stop()); }catch(e){}
@@ -2322,6 +2448,7 @@ function liveUser(t){ $("#heard").textContent="“"+t+"”"; feel(t); }
 function onLive(m){
   if(m.toolCall&&m.toolCall.functionCalls){   // Gemini asked to change or read the lists
     if(live.userText.trim()){ liveUser(live.userText.trim()); live.userText=""; }
+    if(turn.snap===null){ turnBegin(); live.gotAudio=false; }   // held until this turn is heard
     const out=m.toolCall.functionCalls.map(c=>({id:c.id,name:c.name,response:runTool(c.name,c.args)}));
     if(live.ws&&live.ws.readyState===1) live.ws.send(JSON.stringify({toolResponse:{functionResponses:out}}));
     return;
@@ -2334,7 +2461,7 @@ function onLive(m){
   if(parts.length){
     if(live.userText.trim()){ liveUser(live.userText.trim()); live.userText=""; }
     $("#mic").classList.remove("on");
-    for(const p of parts) if(p.inlineData&&/audio/.test(p.inlineData.mimeType||"")){ const r=/rate=(\d+)/.exec(p.inlineData.mimeType); playPcm(p.inlineData.data,r?+r[1]:24000); }
+    for(const p of parts) if(p.inlineData&&/audio/.test(p.inlineData.mimeType||"")){ live.gotAudio=true; const r=/rate=(\d+)/.exec(p.inlineData.mimeType); playPcm(p.inlineData.data,r?+r[1]:24000); }
   }
   if(sc.outputTranscription&&sc.outputTranscription.text){
     live.botText+=sc.outputTranscription.text;
@@ -2345,6 +2472,7 @@ function onLive(m){
       if(rb.length) F.playSteps(rb.slice(0,1).map(b=>[b[0],2.5,b[2]])); }
   }
   if(sc.turnComplete){ if(live.userText.trim()){ liveUser(live.userText.trim()); live.userText=""; }
+    if(turn.snap!==null){ if(live.gotAudio) turnCommit(); else turnRollback(); } live.gotAudio=false;   // delivered only once it was said aloud
     live.botText=""; live.faceSet=false; $("#heard").textContent="I'm listening…"; $("#mic").classList.add("on"); }
 }
 

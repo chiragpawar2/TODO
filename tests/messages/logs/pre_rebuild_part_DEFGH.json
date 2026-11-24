@@ -1,0 +1,74 @@
+[
+ {
+  "id": "D01",
+  "cat": "unknown",
+  "title": "Message for a new person (watchman) then he asks",
+  "turns": [
+   {
+    "say": "Rahul here. Tell the watchman Ramesh that an Amazon parcel is coming, collect it.",
+    "reply": "I have told Ramesh to collect the Amazon parcel when it arrives.",
+    "secs": 2.235,
+    "busy": false,
+    "tools": [
+     {
+      "tool": "leave_message",
+      "args": {
+       "to": "Ramesh",
+       "message": "Amazon parcel is coming, collect it",
+       "from": "Rahul"
+      },
+      "ok": true
+     }
+    ],
+    "state": [
+     {
+      "id": 1,
+      "from": "Rahul",
+      "to": "Ramesh",
+      "text": "Amazon parcel is coming, collect it",
+      "delivered": false,
+      "hours_left": 24
+     }
+    ],
+    "fails": []
+   },
+   {
+    "say": "मैं रमेश, वॉचमैन। साहब ने कुछ बोला क्या?",
+    "reply": "साहब ने कहा है कि अमेज़न का पार्सल आने वाला है, उसे ले लेना।",
+    "secs": 3.289,
+    "busy": false,
+    "tools": [
+     {
+      "tool": "get_messages",
+      "args": {
+       "for": "Ramesh"
+      },
+      "ok": true
+     },
+     {
+      "tool": "mark_delivered",
+      "args": {
+       "ids": [
+        1
+       ]
+      },
+      "ok": true
+     }
+    ],
+    "state": [
+     {
+      "id": 1,
+      "from": "Rahul",
+      "to": "Ramesh",
+      "text": "Amazon parcel is coming, collect it",
+      "delivered": true,
+      "hours_left": 24
+     }
+    ],
+    "fails": []
+   }
+  ],
+  "pass": true,
+  "busy": false
+ }
+]

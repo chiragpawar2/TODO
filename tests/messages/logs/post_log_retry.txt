@@ -1,0 +1,14 @@
+[A01] FAIL  > मी अंजली. सुनीता आली की तिला सांग, आज दुपारी पोळी, भेंडीची भ
+   < ठीक आहे अंजली, सुनीता आली की मी तिला हे नक्की सांगेन.
+   ! no message matching {"from":"/Anjali|अंजली/","to":"/Sunita|सुनीता/"} | tool leave_message not called
+[A01] BUSY  > नमस्ते, मैं सुनीता हूँ। मेरे लिए कोई संदेश है?
+   < Google's AI is very busy right now. Ask me again in a minute.
+[A06] BUSY  > मी आजी बोलतेय. इशाला सांग, संध्याकाळी देवळात जायचं आहे, सहा 
+   < Google's AI is very busy right now. Ask me again in a minute.
+[A06] BUSY  > Hey it's Isha, do I have any messages?
+   < Google's AI is very busy right now. Ask me again in a minute.
+[A08] BUSY  > Anjali here. Tell Sunita to make khichdi for dinner tonight,
+   < Google's AI is very busy right now. Ask me again in a minute.
+[A08] FAIL  > मैं सुनीता। आज मेरे लिए क्या संदेश है?
+   < आपके लिए कोई संदेश नहीं है, सुनीता।
+   ! reply missing /खिचड़ी|खिचडी/ | no message matching {"to":"/Sunita|सुनीता/","delivered":true}

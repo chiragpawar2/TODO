@@ -1,0 +1,237 @@
+[
+ {
+  "id": "I01",
+  "cat": "identity",
+  "title": "Unnamed speaker leaves message -> TODO asks who",
+  "turns": [
+   {
+    "say": "सुनीता को बोलना कल आलू पराठे बनाना।",
+    "reply": "सुनीता को बता दिया है कि कल आलू पराठे बनाने हैं।",
+    "secs": 2.017,
+    "busy": false,
+    "tools": [
+     {
+      "tool": "leave_message",
+      "args": {
+       "message": "कल आलू पराठे बनाना",
+       "to": "सुनीता",
+       "from": "अनjali"
+      },
+      "ok": true
+     }
+    ],
+    "state": [
+     {
+      "id": 1,
+      "from": "अनjali",
+      "to": "सुनीता",
+      "text": "कल आलू पराठे बनाना",
+      "delivered": false,
+      "hours_left": 24
+     }
+    ],
+    "fails": [
+     "reply has none of /कौन|नाम|आप कौन/"
+    ]
+   },
+   {
+    "say": "मैं अंजली हूँ।",
+    "reply": "नमस्ते अंजली, बताइए आज मैं आपकी क्या मदद करूँ?",
+    "secs": 0.765,
+    "busy": false,
+    "tools": [],
+    "state": [
+     {
+      "id": 1,
+      "from": "अनjali",
+      "to": "सुनीता",
+      "text": "कल आलू पराठे बनाना",
+      "delivered": false,
+      "hours_left": 24
+     }
+    ],
+    "fails": [
+     "no message matching {\"from\":\"/Anjali|अंजली/\",\"to\":\"/Sunita|सुनीता/\"}"
+    ]
+   }
+  ],
+  "pass": false,
+  "busy": false
+ },
+ {
+  "id": "I02",
+  "cat": "identity",
+  "title": "Unnamed asks for message -> TODO asks who first",
+  "turns": [
+   {
+    "say": "Anjali here. Tell Raju to come at 4.",
+    "reply": "राजूला सांगते की चार वाजता यायचे.",
+    "secs": 1.493,
+    "busy": false,
+    "tools": [
+     {
+      "tool": "leave_message",
+      "args": {
+       "from": "Anjali",
+       "message": "come at 4",
+       "to": "Raju"
+      },
+      "ok": true
+     }
+    ],
+    "state": [
+     {
+      "id": 1,
+      "from": "Anjali",
+      "to": "Raju (driver)",
+      "text": "come at 4",
+      "delivered": false,
+      "hours_left": 24
+     }
+    ],
+    "fails": []
+   },
+   {
+    "say": "Is there a message for me?",
+    "reply": "अंजली ने कहा है कि आपको ४ बजे आना है। सब ठीक है।",
+    "secs": 10.886,
+    "busy": false,
+    "tools": [
+     {
+      "tool": "get_messages",
+      "args": {
+       "for": "Raju"
+      },
+      "ok": true
+     },
+     {
+      "tool": "mark_delivered",
+      "args": {
+       "ids": [
+        1
+       ]
+      },
+      "ok": true
+     }
+    ],
+    "state": [
+     {
+      "id": 1,
+      "from": "Anjali",
+      "to": "Raju (driver)",
+      "text": "come at 4",
+      "delivered": true,
+      "hours_left": 24
+     }
+    ],
+    "fails": [
+     "reply language latin expected, devanagari share 1.00",
+     "reply has none of /who|name/i"
+    ]
+   },
+   {
+    "say": "I'm Raju.",
+    "reply": "नमस्ते राजू, मैंने आपको अंजली जी का संदेश दे दिया है।",
+    "secs": 3.399,
+    "busy": false,
+    "tools": [],
+    "state": [
+     {
+      "id": 1,
+      "from": "Anjali",
+      "to": "Raju (driver)",
+      "text": "come at 4",
+      "delivered": true,
+      "hours_left": 23.99
+     }
+    ],
+    "fails": [
+     "reply missing /4|four/i"
+    ]
+   }
+  ],
+  "pass": false,
+  "busy": false
+ },
+ {
+  "id": "I03",
+  "cat": "identity",
+  "title": "Unclear recipient 'tell her'",
+  "turns": [
+   {
+    "say": "I'm Anjali. Tell her to make tea.",
+    "reply": "I have told Sunita to make tea.",
+    "secs": 1.783,
+    "busy": false,
+    "tools": [
+     {
+      "tool": "leave_message",
+      "args": {
+       "to": "Sunita",
+       "from": "Anjali",
+       "message": "make tea"
+      },
+      "ok": true
+     }
+    ],
+    "state": [
+     {
+      "id": 1,
+      "from": "Anjali",
+      "to": "Sunita (cook)",
+      "text": "make tea",
+      "delivered": false,
+      "hours_left": 24
+     }
+    ],
+    "fails": [
+     "reply has none of /who|whom|which|कोण/i",
+     "expected 0 messages, have 1"
+    ]
+   }
+  ],
+  "pass": false,
+  "busy": false
+ },
+ {
+  "id": "I04",
+  "cat": "identity",
+  "title": "Unclear recipient: 'tell the staff'",
+  "turns": [
+   {
+    "say": "मी अंजली. त्यांना सांग उद्या लवकर या.",
+    "reply": "नक्कीच अंजली, मी त्यांना उद्या लवकर यायला सांगते.",
+    "secs": 1.826,
+    "busy": false,
+    "tools": [
+     {
+      "tool": "leave_message",
+      "args": {
+       "from": "अंजली",
+       "valid_hours": 24,
+       "message": "उद्या लवकर या",
+       "to": "त्यांना"
+      },
+      "ok": true
+     }
+    ],
+    "state": [
+     {
+      "id": 1,
+      "from": "अंजली",
+      "to": "त्यांना",
+      "text": "उद्या लवकर या",
+      "delivered": false,
+      "hours_left": 24
+     }
+    ],
+    "fails": [
+     "reply has none of /कोणाला|कोणाला सांगू|कोण/",
+     "expected 0 messages, have 1"
+    ]
+   }
+  ],
+  "pass": false,
+  "busy": false
+ }
+]

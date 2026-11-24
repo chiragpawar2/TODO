@@ -1,0 +1,148 @@
+[I01] FAIL  > सुनीता को बोलना कल आलू पराठे बनाना।
+   < ज़रूर, मैंने सुनीता को बता दिया है कि कल आलू पराठे बनाएगी।
+   ! reply has none of /कौन|नाम|आप कौन/
+[I01] FAIL  > मैं अंजली हूँ।
+   < नमस्ते अंजली, बताइए आज मैं आपकी क्या मदद करूँ?
+   ! no message matching {"from":"/Anjali|अंजली/","to":"/Sunita|सुनीता/"}
+[I02] ok  > Anjali here. Tell Raju to come at 4.
+   < मी राजूसाठी हा निरोप लिहून ठेवला आहे.
+[I02] BUSY  > Is there a message for me?
+   < Google's AI is very busy right now. Ask me again in a minute.
+[I02] BUSY  > I'm Raju.
+   < Google's AI is very busy right now. Ask me again in a minute.
+[I03] FAIL  > I'm Anjali. Tell her to make tea.
+   < I have told Sunita to make tea.
+   ! reply has none of /who|whom|which|कोण/i | expected 0 messages, have 1
+[I04] FAIL  > मी अंजली. त्यांना सांग उद्या लवकर या.
+   < मी निरोप पोहोचवेन, उद्या लवकर या.
+   ! reply has none of /कोणाला|कोणाला सांगू|कोण/ | expected 0 messages, have 1
+[I05] ok  > Rahul here. Tell Kamla to clean the study.
+   < I have told Kamla to clean the study.
+[I05] ok  > मी कमला आहे आता. माझ्यासाठी काही?
+   < राहुलने सांगितल्याप्रमाणे, स्टडी रूम साफ करा.
+[I06] BUSY  > Rahul here. Tell Sunita to make dosa.
+   < Google's AI is very busy right now. Ask me again in a minute.
+[I06] BUSY  > मैं सुनीता। संदेश?
+   < Google's AI is very busy right now. Ask me again in a minute.
+[I06] BUSY  > और राजू को बोलो कि सब्जी ले आए।
+   < Google's AI is very busy right now. Ask me again in a minute.
+[I07] FAIL  > Anjali here. Tell the maid to wash the bathroom.
+   < I have told the maid to wash the bathroom.
+   ! reply has none of /Kamla|Rekha|which|कोण/i
+[J01] BUSY  > Anjali here. Add milk to groceries and tell the cook to make
+   < Google's AI is very busy right now. Ask me again in a minute.
+[J02] ok  > मी अंजली. किराणा यादीत साखर टाक आणि सुनीताला सांग चहा कमी सा
+   < मी किराणा यादीत साखर टाकली आहे आणि सुनीता
+[J03] BUSY  > मैं अंजली। सुनीता को बोलो कि आटा खत्म हो गया है तो चावल बना 
+   < Google's AI is very busy right now. Ask me again in a minute.
+[J04] ok  > Anjali hoon. Groceries mein tamatar daal do aur Sunita ko bo
+   < Groceries mein tamatar daal diya hai, aur Sunita ko message bhi de diya hai.
+[J05] ok  > Anjali here. Tell Sunita to make aloo gobi.
+   < I have told Sunita to make aloo gobi.
+[J05] ok  > मैं सुनीता। मेरे लिए संदेश? और हाँ, गोभी खत्म है, लिस्ट में 
+   < अंजलि जी ने कहा है कि आलू गोभी बना दीजिए, और मैंने गोभी को ग्रोसरी लिस्ट में जोड़ दिया है।
+[J06] ok  > Anjali here. Add bread and eggs to groceries.
+   < I have added bread and eggs to your groceries list.
+[K01] ok  > Anjali here. Tell Sunita to make chole for lunch.
+   < I have told Sunita to make chole for lunch.
+[K01] BUSY  > Hi, I'm Sunita. What should I cook today?
+   < Google's AI is very busy right now. Ask me again in a minute.
+[K02] BUSY  > Anjali here. Tell Kamla to clean the terrace.
+   < Google's AI is very busy right now. Ask me again in a minute.
+[K02] BUSY  > Kamla hoon. Aaj kya karna hai?
+   < Google's AI is very busy right now. Ask me again in a minute.
+[K03] ok  > Rahul here. Tell Kamla to polish the silver for puja.
+   < I have told Kamla to polish the silver for puja.
+[K03] ok  > मी कमला. आज काय करायचं?
+   < राहुलने निरोप दिला आहे की पूजेसाठी चांदी घासून ठेवा.
+[K04] ok  > मैं सुनीता हूँ। आज खाने में क्या बनाऊँ?
+   < आपके लिए कोई संदेश नहीं है, सुनीता जी। आप अपनी पसंद से कुछ अच्छा बना सकती हैं।
+[K05] ok  > Rahul here. Tell Raju to take Aaji to the hospital at 11 for
+   < I have told Raju to take Aaji to the hospital at eleven for her checkup.
+[K05] BUSY  > Raju hoon, aaj kahan jaana hai?
+   < Google's AI is very busy right now. Ask me again in a minute.
+[K06] ok  > मी अंजली. सुनीताला सांग, आज भाकरी आणि पिठलं.
+   < निropant, मी सुनीताला सांगते आज भाकरी आणि पिठलं करायचं.
+[K06] FAIL  > Memsaab ne kuch bola hai kya? Sunita hoon.
+   < अंजलीजी ने कहा है कि आज भाकरी और पिठलं बनाना है।
+   ! reply language latin expected, devanagari share 1.00 | reply missing /bhakri|bhakhri/i , /pithla|besan/i
+[L01] ok  > Anjali here. Tell Sunita: tomorrow 12 guests for lunch. Make
+   < I have told Sunita.
+[L01] ok  > मैं सुनीता हूँ, कल के लिए क्या संदेश है?
+   < अंजलि ने कहा है कि कल दोपहर के खाने के लिए बारह मेहमान आ रहे हैं। दो किलो चिकन बिरयानी, एक किलो पनीर बटर मसाला, एक लीटर दही का रायता, चालीस पूरी और फ्रिज के डिब
+[L02] ok  > Rahul here. Tell Raju: at 9 drop Isha at Kothrud school, at 
+   < I have passed that message on to Raju.
+[L02] BUSY  > Raju here, aaj ka kya plan hai?
+   < Google's AI is very busy right now. Ask me again in a minute.
+[L03] ok  > मी अंजली. कमलाला सांग: आधी भांडी, मग हॉल आणि बेडरूम झाडून पु
+   < मी कमलाला हे सांगून टाकते.
+[L03] ok  > मी कमला. आज काय काय करायचं?
+   < अंजलीजींनी सांगितले आहे की आधी भांडी, मग हॉल आणि बेडरूम झाडून पुसून घे, वॉशिंग मशीनमधले कपडे वाळत घाल, आणि कुंड्यांना पाणी घाल. हे आज बारा वाजेपर्यंत संपवायचे आ
+[L04] ok  > Anjali here. Tell Sunita: dal with only half spoon salt, no 
+   < I have passed that message on to Sunita.
+[L04] FAIL  > मैं सुनीता, कोई संदेश?
+   < अंजलि जी ने कहा है कि दाल में सिर्फ आधा चम्मच नमक डालना, हरी मिर्च बिल्कुल नहीं, दादीजी के लिए चार नरम रोटियां बनाना और चावल सिर्फ एक कप ही बनाना।
+   ! reply missing /रोटी/
+[L05] ok  > Rahul here. Tell Anjali the AC repair guy Salim will call fr
+   < I have told Anjali that Salim will call from 98220 12345 for the AC repair, and to pay him eighteen hundred rupees in cash.
+[L05] ok  > Anjali here, any message?
+   < Rahul said the AC repair guy Salim will call from 98220 12345, the charge is 1800 rupees, and to pay him cash.
+[L06] ok  > मैं राहुल। आरव को बोलो: स्कूल बैग में स्विमिंग कॉस्ट्यूम, तौ
+   < मैंने आरव के लिए संदेश रख दिया है।
+[L06] FAIL  > Aarav here, what do I need to know?
+   < There are no messages for you right now, Aarav.
+   ! reply missing /swim/i , /towel/i , /50/ , /7[:.]15|quarter past seven/i
+[M01] ok  > Hi TODO, good morning! How are you?
+   < Good morning, I am doing very well. How can I help you today?
+[M02] ok  > मी अंजली. आज खूप उकडतंय ना?
+   < अंजलीजी, खरंच खूप उकडतंय आज.
+[M03] ok  > Rahul here. Sunita makes the best biryani, doesn't she?
+   < She truly does, Rahul. Her biryani is always delicious.
+[M04] ok  > मैं सुनीता हूँ। आज बहुत गर्मी है, मैंने खाना बना दिया है।
+   < खाना बनाने के लिए धन्यवाद सुनीता, आज सच में बहुत गर्मी है।
+[M05] BUSY  > Isha here. Is Raju coming today?
+   < Google's AI is very busy right now. Ask me again in a minute.
+[M06] ok  > Anjali here. Tell Sunita to make kheer.
+   < I have told Sunita to make kheer.
+[M06] ok  > सुनीता हूँ, संदेश?
+   < अंजली ने कहा है कि खीर बना लो।
+[M06] ok  > ठीक है, धन्यवाद!
+   < कोई बात नहीं।
+[N01] ok  > Are you a bot?
+   < I am TODO, your home helper.
+[N02] BUSY  > तुम कौन हो?
+   < Google's AI is very busy right now. Ask me again in a minute.
+[N03] FAIL  > Tu kon aahes?
+   < मी टूडू आहे, तुमचा घरचा मदतनीस. सांगा, मी तुम्हाला कशी मदत करू?
+   ! reply missing /TODO/i
+[N04] ok  > Hey assistant, what can you do for this house?
+   < I can help you manage your family lists, keep track of groceries, and pass messages between everyone in the house. Just tell me what you need!
+[O01] ok  > Anjali here. Tell Sunita to make methi paratha.
+   < Sunita should make methi paratha, I will tell her.
+[O01] ok  > मैं सुनीता हूँ, कोई संदेश?
+   < अंजलि जी ने कहा है कि मेथी पराठा बना दीजिए।
+[O01] ok  > मराठीत परत सांगा, मी सुनीता.
+   < अंजलीजींनी सांगितलंय की मेथीचे पराठे बनवा.
+[O02] BUSY  > Anjali here. Tell Raju to pick me up at 6 from office.
+   < Google's AI is very busy right now. Ask me again in a minute.
+[O02] BUSY  > आणि त्याला सांग, येताना भाजी घेऊन ये.
+   < Google's AI is very busy right now. Ask me again in a minute.
+[O02] BUSY  > Raju here, any message?
+   < Google's AI is very busy right now. Ask me again in a minute.
+[O03] ok  > मी अंजली. राजूला सांग उद्या सुट्टी.
+   < मी राजूला सांगते की उद्या सुट्टी आहे.
+[O03] FAIL  > Raju here. Message for me?
+   < No messages for you right now, Raju.
+   ! reply has none of /off|holiday|leave/i
+[O03] FAIL  > हिंदी में बोलो
+   < आपके लिए अभी कोई संदेश नहीं है, राजू।
+   ! reply missing /छुट्टी/
+[O04] BUSY  > मैं सुनीता हूँ। अंजली दीदी को बोलना, गैस वाला आया था।
+   < Google's AI is very busy right now. Ask me again in a minute.
+[O04] BUSY  > Anjali here, anything for me?
+   < Google's AI is very busy right now. Ask me again in a minute.
+[O05] ok  > Anjali here. This is Meena, our new cook, she speaks Marathi
+   < नमस्कार मीना, स्वागत आहे आपले!
+[O05] ok  > मी मीना. माझ्यासाठी काही?
+   < तुमच्यासाठी सध्या कोणताही निरोप नाही आहे.
+DONE 19/40 pass, 12 busy-inconclusive
