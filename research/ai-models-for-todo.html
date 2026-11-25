@@ -1,0 +1,110 @@
+<!doctype html><html><head><meta charset="utf-8"><title>AI models for TODO</title>
+<style>
+@page{size:A4;margin:16mm 15mm}
+body{font:10.5pt/1.5 -apple-system,"Helvetica Neue",Arial,sans-serif;color:#1b1d22;margin:0}
+h1{font-size:24pt;margin:0 0 4px;letter-spacing:-.5px}
+.sub{color:#5b6170;margin:0 0 18px}
+h2{font-size:14pt;margin:22px 0 8px;padding-bottom:4px;border-bottom:2px solid #1b1d22}
+h3{font-size:11.5pt;margin:14px 0 4px}
+table{width:100%;border-collapse:collapse;margin:6px 0 10px;font-size:9.5pt}
+th,td{text-align:left;padding:6px 7px;border-bottom:1px solid #dde0e6;vertical-align:top}
+th{background:#f2f4f7;font-weight:600}
+tr.win td{background:#eef5ff}
+.tag{display:inline-block;font-size:8pt;font-weight:700;padding:1px 6px;border-radius:9px;background:#2f6fe4;color:#fff;margin-left:4px}
+.box{background:#f6f8fb;border-left:4px solid #2f6fe4;padding:10px 12px;margin:10px 0}
+.warn{border-left-color:#d9822b;background:#fdf6ee}
+.cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:8px 0}
+.card{border:1.5px solid #2f6fe4;border-radius:8px;padding:10px}
+.card h3{margin:0 0 4px;color:#2f6fe4}
+.card p{margin:3px 0;font-size:9.5pt}
+.small{font-size:8.5pt;color:#5b6170}
+ul{margin:4px 0 8px;padding-left:18px} li{margin:2px 0}
+.pb{page-break-before:always}
+</style></head><body>
+
+<h1>AI models for TODO</h1>
+<p class="sub">Which brain and voice to run TODO on: options, prices, free tiers, and a recommendation. Prepared 25 November 2026. Prices change often; figures come from published pricing pages and recent third-party summaries (Sept–Nov 2026), and should be checked on each provider's own page before committing. ₹ figures use about ₹88 to the US dollar.</p>
+
+<h2>1. The three winners</h2>
+<div class="cards">
+ <div class="card"><h3>Gemini <span class="tag">Main brain + voice</span></h3>
+  <p><b>Google.</b> The only option with live voice in and out, tool use (lists, messages) and Marathi/Hindi/English, callable straight from the phone page.</p>
+  <p><b>Free tier:</b> yes, but small and changing; resets at midnight US Pacific (1:30 pm IST).</p>
+  <p><b>Paid:</b> Flash-Lite text $0.30 in / $2.50 out per million tokens; Live voice ≈ $0.005 per minute heard, $0.018 per minute spoken.</p></div>
+ <div class="card"><h3>Groq <span class="tag">Free backup</span></h3>
+  <p><b>Groq</b> (the fast-chip company, not xAI's Grok). Runs open models (GPT-OSS, Qwen) very fast, plus Whisper speech-to-text.</p>
+  <p><b>Free tier:</b> generous, no card: about 30 requests a minute and 1,000 a day per model.</p>
+  <p><b>Role:</b> answers typed and fallback turns when Gemini is busy, and can run typed tests for free.</p></div>
+ <div class="card"><h3>Sarvam <span class="tag">Indian voices</span></h3>
+  <p><b>Sarvam AI</b> (India). Speech-to-text (Saaras) and text-to-speech (Bulbul) built for Indian languages, including code-mixed speech.</p>
+  <p><b>Free:</b> ₹100 credits for new accounts (some pages still say ₹1,000), never expire.</p>
+  <p><b>Paid:</b> listening ₹0.49 a minute; speaking ₹3 per 1,000 characters (Bulbul V3) or ₹2 (V4 Flash).</p></div>
+</div>
+<div class="box"><b>Recommended setup.</b> Gemini for conversation, lists and messages, on a paid key with a daily cap. Groq as the free backup when Gemini is busy. Sarvam as the speaking voice if Gemini's Marathi sounds off when tested on the phone. A separate Gemini key and project for testing, so tests never use the family's quota.</div>
+
+<h2>2. Cost of a 30-minute daily conversation</h2>
+<p>Assumptions: the mic is open 30 minutes a day (all billed as heard audio), TODO speaks about 12 minutes, and each turn re-sends the conversation so far, adding roughly 30–80%.</p>
+<table>
+<tr><th>Setup</th><th>Voice</th><th>Per day</th><th>Per month</th><th>Notes</th></tr>
+<tr class="win"><td><b>Gemini 3.8 Live</b></td><td>Natural, all three languages</td><td>$0.37–0.60</td><td><b>≈ ₹1,000–1,600</b></td><td>Works from the phone page as it is today</td></tr>
+<tr class="win"><td><b>Sarvam voices + Groq brain</b></td><td>Best Indian voices, slower replies</td><td>₹37–47</td><td><b>≈ ₹1,100–1,400</b></td><td>Groq free; Sarvam speech is most of the cost</td></tr>
+<tr class="win"><td><b>Groq + phone's built-in voice</b></td><td>Robotic</td><td>Free</td><td><b>₹0</b></td><td>Within about 1,000 requests a day</td></tr>
+<tr><td>OpenAI Realtime mini</td><td>Very natural, weaker Marathi</td><td>$0.47–0.80</td><td>≈ ₹1,250–2,100</td><td>Needs a small server to hide the key</td></tr>
+<tr><td>OpenAI Realtime (full)</td><td>Best overall</td><td>$1.50–2.50</td><td>≈ ₹4,000–6,600</td><td>Needs a server</td></tr>
+</table>
+
+<h2>3. Cost of our testing</h2>
+<table>
+<tr><th>Test</th><th>Size</th><th>Gemini Flash-Lite cost</th></tr>
+<tr><td>Full run: all 119 message scenarios</td><td>≈ 360 turns, ≈ 900 requests</td><td>≈ $1.80 (₹160)</td></tr>
+<tr><td>Targeted re-run after a fix</td><td>≈ 35 scenarios</td><td>≈ $0.50 (₹45)</td></tr>
+<tr><td>A month of active building</td><td>≈ 8 full runs + re-runs</td><td>≈ ₹1,300–1,800</td></tr>
+<tr><td>Same typed tests on Groq</td><td>—</td><td>Free, but tests a different brain from the phone's</td></tr>
+</table>
+<p><b>Monthly total with Gemini for everything:</b> about ₹2,300–3,400 while building, falling to ₹1,000–1,600 once testing slows down.</p>
+
+<h2 class="pb">4. Every option compared</h2>
+<table>
+<tr><th>Provider</th><th>What it gives TODO</th><th>Marathi / Hindi</th><th>Free tier</th><th>Paid price</th></tr>
+<tr class="win"><td><b>Google Gemini</b></td><td>Brain + live voice + tools</td><td>Good / Good</td><td>Yes, small</td><td>Flash-Lite $0.30/$2.50 per M tokens; Live ≈ $0.005/$0.018 per min</td></tr>
+<tr class="win"><td><b>Groq</b></td><td>Fast brain (open models), Whisper speech-to-text</td><td>Text fair / good; no voice</td><td>Yes, ≈ 1,000 requests a day</td><td>From ≈ $0.05 per M tokens</td></tr>
+<tr class="win"><td><b>Sarvam AI</b></td><td>Indian speech-to-text and text-to-speech, plus Indian LLMs</td><td>Best / Best</td><td>₹100 credits</td><td>₹0.49/min listening; ₹2–3 per 1,000 chars speaking</td></tr>
+<tr><td>OpenAI Realtime</td><td>Live voice + tools</td><td>Weaker / Good</td><td>No</td><td>Mini $10/$20, full $32/$64 per M audio tokens</td></tr>
+<tr><td>Deepgram</td><td>Fast speech-to-text, voice agent kit</td><td>Limited / Yes</td><td>Trial credit</td><td>≈ $0.008–0.009 per min</td></tr>
+<tr><td>ElevenLabs</td><td>Very natural text-to-speech</td><td>Limited / Yes</td><td>Small monthly free allowance</td><td>Per-character plans</td></tr>
+<tr><td>Cartesia</td><td>Expressive, fast text-to-speech</td><td>Limited / Yes</td><td>Trial</td><td>Per-character plans</td></tr>
+<tr><td>Mistral</td><td>Brain</td><td>Fair / Fair</td><td>Free experiment tier (reports differ)</td><td>Per token</td></tr>
+<tr><td>OpenRouter</td><td>One key for many models, some marked free</td><td>Depends on model</td><td>≈ 50 free requests a day (1,000 after a $10 top-up)</td><td>Pass-through prices</td></tr>
+<tr><td>Cloudflare Workers AI</td><td>Open models, Whisper, simple text-to-speech</td><td>Fair</td><td>Daily free allowance, no card</td><td>Per use</td></tr>
+<tr><td>NVIDIA NIM</td><td>Open models for development</td><td>Fair</td><td>≈ 40 requests a minute; developer programme</td><td>For testing, not production</td></tr>
+<tr><td>Cohere</td><td>Brain (Command models)</td><td>Fair</td><td>Trial: 1,000 calls a month</td><td>Per token</td></tr>
+<tr><td>Cerebras</td><td>Very fast open models</td><td>Fair</td><td>$5 trial for 30 days (no-card tier ended)</td><td>Per token</td></tr>
+<tr><td>Local (Ollama: Gemma, Qwen)</td><td>Offline brain on laptop/Pi</td><td>Weak / Fair</td><td>Free, unlimited</td><td>Electricity only</td></tr>
+</table>
+
+<h2>5. Who gives a free API key today</h2>
+<p>About <b>ten providers</b> still offer a real free key or lasting free allowance, with no payment needed. Three more give only trial credit.</p>
+<table>
+<tr><th>Lasting free tier (no card)</th><th>Trial credit only</th></tr>
+<tr><td>Google Gemini · Groq · Mistral · OpenRouter (free models) · Cloudflare Workers AI · NVIDIA NIM (developer programme) · Cohere (trial key) · GitHub Models (not confirmed this month) · Ollama Cloud (limited sessions) · SiliconFlow (needs ID verification)</td><td>Sarvam (₹100) · Cerebras ($5 for 30 days) · Deepgram, ElevenLabs, Cartesia (small trial allowances)</td></tr>
+</table>
+<div class="box warn"><b>Catches with free tiers.</b> Limits are small and change without notice (Gemini's has dropped twice while building TODO). Several free tiers, Gemini's included outside Europe and the UK, may use your prompts to improve their products, which matters for a family's messages. Free tiers are meant for testing, not daily use.</div>
+
+<h2>6. Things to act on</h2>
+<ul>
+<li><b>Gemini 3.1 Flash Live Preview</b>, TODO's main voice model, is reported to have shut down on 17 November 2026; <b>Gemini 3.8 Live</b> replaces it. TODO's voice model needs checking and switching.</li>
+<li>Older Gemini 2.5 text models are retired for new keys; TODO no longer uses them.</li>
+<li>Set a <b>daily request cap</b> on the paid Gemini project; budget alerts alone don't stop spending.</li>
+<li>Add <b>Groq</b> as the busy-time backup, then test <b>Sarvam</b> for Marathi speech.</li>
+</ul>
+
+<h2>Sources</h2>
+<p class="small">
+Gemini pricing: morphllm.com/gemini-api-pricing · fastero.com/blog/gemini-api-pricing · opslyft.com/blog/google-gemini-api-pricing-2026 · datastudios.org (Gemini pricing) · ai.google.dev/gemini-api/docs/rate-limits<br>
+OpenAI Realtime: cekura.ai/blogs/openai-realtime-api-pricing · layer3labs.io/guides/openai-realtime-api-pricing · micdrop.dev/blog/openai-realtime-api-pricing<br>
+Sarvam: sarvam.ai/api-pricing · docs.sarvam.ai (pricing, changelog) · convo360.ai/blog/sarvam-ai-pricing-india<br>
+Groq: cloudzero.com/blog/groq-pricing · klymentiev.com/blog/groq-pricing · tokenmix.ai/blog/groq-free-tier-limits-2026<br>
+Voice for Indian languages: callmissed.com/en/blog/best-voice-ai-apis-indian-languages-2026 · caller.digital (OpenAI Realtime vs India platforms) · subverseai.com (pipeline vs speech-to-speech)<br>
+Free API keys: inferencehub.org/best/free-llm-apis · developersdigest.tech/models/free-api · flatkey.ai/blog/free-llm-apis-2026 · benchlm.ai/free-tier · github.com/mnfst/awesome-free-llm-apis · wotai.co/blog/best-free-llm-apis
+</p>
+</body></html>
