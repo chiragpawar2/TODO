@@ -2496,7 +2496,7 @@ function showKey(){ const k=getKey(), el=$("#keystate"); $("#forget").hidden=!k;
    language with one natural voice. Tap again to end. If Live is unavailable
    (no key, no support, or the free quota is used up), the app falls back to
    the browser's speech recognition + Gemini text + one voice per reply. */
-const LIVE_MODELS=["gemini-3.1-flash-live-preview","gemini-2.5-flash-native-audio-latest"];
+const LIVE_MODELS=["gemini-3.8-live","gemini-3.1-flash-live-preview","gemini-2.5-flash-native-audio-latest"];
 const live={on:false,ws:null,model:null,stream:null,src:null,node:null,playAt:0,sources:[],userText:"",botText:"",faceSet:false};
 let liveDownUntil=0;
 const MIC_WORKLET=`class Mic16k extends AudioWorkletProcessor{
@@ -2562,6 +2562,7 @@ async function liveStart(){
 function stopPlayback(){ for(const s of live.sources){ try{ s.stop(); }catch(e){} } live.sources=[]; live.playAt=0; try{ F.hush(); }catch(e){} }
 function liveStop(){
   live.on=false; speakerReset();   // a new session may be someone else
+  live.awaitSpeech=false; clearTimeout(live.speechT);
   if(turn.snap!==null){ if(live.gotAudio) turnCommit(); else turnRollback(); }
   try{ if(live.ws){ const w=live.ws; live.ws=null; w.close(1000); } }catch(e){}
   try{ live.node&&live.node.disconnect(); live.src&&live.src.disconnect(); }catch(e){}
@@ -2588,7 +2589,8 @@ function onLive(m){
     const calls=m.toolCall.functionCalls;
     vSettle().then(()=>{ voiceToSpeaker(); if(speaker.byVoice&&speaker.p) $("#heard").textContent=($("#heard").textContent||"")+" · "+speaker.p.name;
       const out=calls.map(c=>({id:c.id,name:c.name,response:runTool(c.name,c.args)}));
-      if(live.ws&&live.ws.readyState===1) live.ws.send(JSON.stringify({toolResponse:{functionResponses:out}})); });
+      if(live.ws&&live.ws.readyState===1){ live.ws.send(JSON.stringify({toolResponse:{functionResponses:out}})); live.awaitSpeech=true;
+        clearTimeout(live.speechT); live.speechT=setTimeout(()=>{ if(live.awaitSpeech&&!live.gotAudio){ live.awaitSpeech=false; if(turn.snap!==null) turnRollback(); } },20000); } });
     return;
   }
   const sc=m.serverContent; if(!sc) return;
@@ -2609,7 +2611,10 @@ function onLive(m){
       let rb=[]; try{ rb=(R.readBeats(live.botText)||[]).filter(b=>b[0]!=="attentive"); }catch(e){}
       if(rb.length) F.playSteps(rb.slice(0,1).map(b=>[b[0],2.5,b[2]])); }
   }
-  if(sc.turnComplete){ vTurnEnd(); if(live.userText.trim()){ liveUser(live.userText.trim()); live.userText=""; }
+  // Newer Live models end the turn right after a tool call and speak in a second turn:
+  // keep the turn open until the answer has actually been said.
+  if(sc.turnComplete&&live.awaitSpeech&&!live.gotAudio) return;
+  if(sc.turnComplete){ live.awaitSpeech=false; clearTimeout(live.speechT); vTurnEnd(); if(live.userText.trim()){ liveUser(live.userText.trim()); live.userText=""; }
     if(turn.snap!==null){ if(live.gotAudio) turnCommit(); else turnRollback(); } live.gotAudio=false;   // delivered only once it was said aloud
     live.botText=""; live.faceSet=false; $("#heard").textContent="I'm listening…"; $("#mic").classList.add("on"); }
 }
