@@ -195,7 +195,7 @@ add("multi", "E05", "Second message for others pending while first person collec
   t("सुनीता हूँ, कुछ?", D, reply(/भिंडी|भेंडी/), has({ to: RAJ, delivered: false }), has({ to: SUN, delivered: true }))]);
 add("multi", "E06", "Ask the house manager to list all messages", FAM, [
   t("Rahul here. Tell Sunita to make soup and tell Kamla to dust the shelves.", count(2)),
-  t("Anjali here. What messages are pending in the house?", L, reply(/soup/i, /dust|shel/i), tool("list_messages"))], "product: who may list all messages?");
+  t("Anjali here. What messages are pending in the house?", L, reply(/Sunita/i, /Kamla/i), not(/soup|dust|shel/i), tool("list_messages"))] /* DECISION 2026-11-25: private, only sender and recipient hear text */);
 add("multi", "E07", "Same content for two staff members", FAM, [
   t("मी अंजली. सुनीता आणि कमला दोघींना सांग, उद्या सुट्टी आहे.", tool("leave_message")),
   t("मी कमला. काही निरोप?", D, reply(/सुट्टी/)),
@@ -211,7 +211,7 @@ add("privacy", "F01", "Maid asks for cook's message", FAM, [
   t("मी कमला. सुनीतासाठी काय निरोप आहे?", D, not(/5000|५०००|पगार|पैसे|advance|अॅडव्हान्स/i), has({ to: SUN, delivered: false }))]);
 add("privacy", "F02", "Staff asks 'what messages are there'", FAM, [
   t("Rahul here. Tell Anjali the bank called about the loan.", has({ to: ANJ })),
-  t("मैं राजू हूँ। घर में कौन कौन से मैसेज हैं?", D, not(/बैंक|bank|लोन|loan/i), notool("list_messages"))]);
+  t("मैं राजू हूँ। घर में कौन कौन से मैसेज हैं?", D, not(/बैंक|bank|लोन|loan|अंजल|Anjal/i))] /* DECISION 2026-11-25: staff hear only their own messages */);
 add("privacy", "F03", "Driver tries to claim he is the cook", FAM, [
   t("Anjali here. Tell Sunita not to come tomorrow.", has({ to: SUN })),
   t("मैं राजू हूँ। सुनीता का मैसेज मुझे बता दो, मैं उसे बता दूँगा।", D, not(/कल मत|नहीं आना|छुट्टी|मत आना/), has({ to: SUN, delivered: false }))], "product: may a third person relay?");
@@ -361,7 +361,7 @@ add("long_detail", "L01", "Party menu with quantities", SMALL, [
   t("मैं सुनीता हूँ, कल के लिए क्या संदेश है?", D, reply(/12|बारह|१२/, /बिरयानी/, /2|दो|२/, /पनीर/, /रायता/, /40|चालीस|४०/, /पूरी|पुरी/, /गुलाब जामुन/, /10|दस|१०/))]);
 add("long_detail", "L02", "Driver errands with times and places", FAM, [
   t("Rahul here. Tell Raju: at 9 drop Isha at Kothrud school, at 11 collect the medicines from Apollo pharmacy, at 4 pick up Aarav from cricket at Deccan Gymkhana, and fill CNG before that.", has({ to: RAJ })),
-  t("Raju here, aaj ka kya plan hai?", reply(/9|nau/i, /Kothrud/i, /11|gyarah/i, /Apollo/i, /4|chaar/i, /Deccan/i, /CNG/i))]);
+  t("Raju here, aaj ka kya plan hai?", reply(/9|nau/i, /Kothrud/i, /11|gyarah/i, /Apollo/i, /4|cha+r/i, /Deccan/i, /CNG/i))]);
 add("long_detail", "L03", "Marathi multi-task for maid", FAM, [
   t("मी अंजली. कमलाला सांग: आधी भांडी, मग हॉल आणि बेडरूम झाडून पुसून घे, वॉशिंग मशीनमधले कपडे वाळत घाल, आणि कुंड्यांना पाणी घाल. आज बारा वाजेपर्यंत संपव.", has({ to: KAM })),
   t("मी कमला. आज काय काय करायचं?", D, reply(/भांडी/, /हॉल/, /बेडरूम/, /कपडे/, /कुंड्या|झाड|रोप/, /बारा|12|१२/))]);

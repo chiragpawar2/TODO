@@ -766,7 +766,7 @@ const pnorm=x=>String(x||"").toLowerCase().replace(/[’'.,!?।"]/g," ").replac
 function stripGlued(w){   // "अंजलीताई" -> "अंजली", "सुनीताजी" -> "सुनीता", but "आजी" and "aaji" stay
   for(const t of TITLES) if(w.length>t.length&&w.endsWith(t)&&w.length-t.length>=3) return w.slice(0,-t.length);
   return w; }
-function variants(w){ const v=new Set([w]); const g=stripGlued(w); v.add(g);
+function variants(w){ w=String(w).replace(/्$/,""); const v=new Set([w]); const g=stripGlued(w); v.add(g);   // "ड्राइवर्" = ड्राइवर
   for(const x of [w,g]){ const c=x.replace(CASE_END,""); if(c!==x&&c.length>=2) { v.add(c); v.add(stripGlued(c)); } }
   return [...v]; }
 function nameTokens(q){ let t=pnorm(q).split(" ").filter(w=>w&&!STOP.includes(w));
@@ -937,11 +937,14 @@ function runMsgTool(name,a){
     msgs.list=msgs.list.filter(x=>x!==m); saveMsgs(); updateMsgDot(); if(ui.view==="messages") render();
     return {ok:true,deleted:m.id}; }
   if(name==="list_messages"){ const by=a.asked_by?resolvePeople(a.asked_by).people:[]; const p=by.length===1?by[0]:null;
-    return {ok:true,messages:msgs.list.map(m=>p&&((m.from_id?m.from_id===p.id:samePerson(m.from,p.name))||isMsgFor(m,p))?msgView(m):msgMeta(m)),
+    const mine=m=>p&&((m.from_id?m.from_id===p.id:samePerson(m.from,p.name))||isMsgFor(m,p));
+    const staff=!p||/cook|maid|driver|watchman|bai|maharaj|helper|cleaner|staff|security/i.test(p.role||"");   // staff and strangers hear only their own
+    return {ok:true,messages:msgs.list.filter(m=>!staff||mine(m)).map(m=>mine(m)?msgView(m):msgMeta(m)),
       hint:"Message text is private: say only who each is for and from, unless the speaker sent it or it is for them."}; }
   if(name==="get_people") return {ok:true,people:people.map(p=>({name:p.name,role:p.role,languages:langsOf(p)}))};
   if(name==="add_person"){ const nm=String(a.name||"").trim(); if(!nm) return {ok:false,error:"missing_name"};
     const ex=resolvePeople(nm); if(ex.how==="name"&&ex.people.length) return {ok:true,already_known:true};
+    if(ex.how==="role"&&ex.people.length) return {ok:false,error:"that_is_a_role_already_known",people:ex.people.map(p=>({name:p.name,role:p.role})),hint:"Use this person instead of adding a new one."};
     const ls=(Array.isArray(a.languages)?a.languages:(a.language?[a.language]:[])).map(x=>String(x).trim()).filter(Boolean);
     people.push({id:Date.now(),name:nm,role:String(a.role||"").trim(),langs:ls,voice:false}); savePeople(); renderPeople();
     return {ok:true,added:nm}; }
@@ -1121,7 +1124,8 @@ async function romanFix(text,reply,id,cfg,key){
       body:JSON.stringify({systemInstruction:{parts:[{text:persona()+" Reply in Hindi/Marathi written in English letters (romanised), like the person did."}]},contents,generationConfig:cfg})});
     clearTimeout(tm); if(!r.ok) return reply;
     const d=await r.json(); const t=((((d.candidates||[])[0]||{}).content||{}).parts||[]).filter(p=>!p.thought&&p.text).map(p=>p.text).join("").trim();
-    return t&&devaShare(t)<0.15?t:reply;
+    // keep the original if the rewrite shrank a lot (it once turned a delivered message into "no message")
+        return t&&devaShare(t)<0.15&&t.length>=reply.length*0.5?t:reply;
   }catch(e){ clearTimeout(tm); return reply; }
 }
 // A delivered message whose checklist items are missing from the reply, same script only, gets them added.
