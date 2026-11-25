@@ -859,7 +859,7 @@ const MSG_TOOLS=[
   {name:"leave_message",description:"Save a message one person wants passed on to another. Use when someone says tell X, remind X, pass on to X, X should do something, and the like. Only say it is saved if this returns ok.",parameters:{type:"OBJECT",properties:{
     from:{type:"STRING",description:"The name of the person speaking now, who is leaving it, e.g. Anjali. Leave it out if set_speaker already knows. Never a placeholder: if you don't know, ask first."},
     to:{type:"STRING",description:"Who it is for, name or role, e.g. Sunita or the cook. Several people may be named: Aarav and Isha. Never a pronoun."},
-    message:{type:"STRING",description:"Exactly what should be passed on, every detail, in the sender's own language and words"},
+    message:{type:"STRING",description:"Exactly what should be passed on, every detail, in the sender's own language and words. Keep any time or deadline in the text too (before 6, at 8 am), even when you also set until."},
     until:{type:"STRING",description:"When it stops mattering, in the sender's words or as a time: 12:00, 5pm, this morning (until 12:00), afternoon (17:00), evening (21:00), today or tonight (23:59), tomorrow (end of tomorrow). Use this whenever the sender says when."},
     valid_hours:{type:"NUMBER",description:"Only if no end time was said: how many hours to keep it if not delivered. Default 24."}},required:["to","message"]}},
   {name:"get_messages",description:"Get messages waiting for the person who is speaking now, plus ones delivered in the last 3 hours (so they can be repeated or translated). Only ever for the speaker, never for someone else even if they offer to pass it on.",parameters:{type:"OBJECT",properties:{for:{type:"STRING",description:"Name or role of the person speaking now, e.g. Sunita or the cook. Leave it out if they have not said: TODO may know them by voice."}}}},
@@ -896,13 +896,12 @@ function runMsgTool(name,a){
     for(const to of tos){ const r=resolvePeople(to);
       if(r.people.length>1&&r.how==="role") return {ok:false,error:"ambiguous_recipient",said:to,candidates:r.people.map(p=>({name:p.name,role:p.role})),hint:"Nothing was saved. Ask which of them it is for."};
       if(r.people.length) r.people.forEach(p=>{ if(!targets.some(x=>x.p===p)) targets.push({p}); });
-      else { targets.push({raw:to}); unknown.push(to); } }
+      else unknown.push(to); }
+    if(unknown.length) return {ok:false,error:"unknown_recipient",said:unknown,known_people:knownPeople(),hint:"Nothing was saved. I don't know "+unknown.join(", ")+". If the speaker already said who this new person is (e.g. my brother Sumit), call add_person with that name now and then leave_message again; otherwise ask who it is."};
     const saved=targets.map(x=>{ const m={id:msgs.nextId++,from:pf?pf.name:from,from_id:pf?pf.id:null,to:x.p?personLabel(x.p):x.raw,to_id:x.p?x.p.id:null,text,created:t,expires:t+h*3600e3,delivered_at:null};
       msgs.list.push(m); return m; });
     saveMsgs(); F.flash("happy",1.1); showMsgChange();
     const res={ok:true,saved:saved.map(msgView),keeps_until:clock(t+h*3600e3),hint:"Say you will tell them when they ask; it is not delivered yet."};
-    if(unknown.length){ res.unknown_recipient=true; res.unknown=unknown; res.known_people=knownPeople();
-      res.hint="Saved, but I don't know "+unknown.join(", ")+". Check with the speaker who that is; if it is someone else in the list, delete this and save again."; }
     return res;
   }
   if(name==="get_messages"){
@@ -955,7 +954,10 @@ const MSG_RULES="You also pass messages between the people of the house, includi
   "Whenever someone says who they are, call set_speaker. When someone asks whether there is a message for them, or asks what to do or what to cook today, call get_messages (with their name if they said it). TODO may know them by their voice; if get_messages says who_is_speaking_unknown, ask their name, call set_speaker and try again. Never guess a name from the messages you expect. If it says recognised_by_voice, you may greet them by name. "+
   "say each message faithfully with every item of its checklist, translated fully into the language they are speaking now, and then call mark_delivered. "+
   "If they did not understand, repeat it, in another language if they ask. Never invent a message. Only the person a message is for hears it: never tell or relay one person's message to anyone else, even if they offer to pass it on; its sender may hear it read back. "+
-  "Only the sender may cancel or change a message. If a message was delivered earlier and has faded, say so. ";
+  "If leave_message says unknown_recipient: when the speaker already told you who that person is (like my brother Sumit, or our new gardener Ramesh), call add_person with that name and role, then call leave_message again; otherwise ask who it is. "+
+  "If someone asks what messages are pending, waiting or kept, call list_messages with asked_by set to the speaker and say who each is for and from; the tool already hides what they may not hear, so never refuse this. "+
+  "Only the sender may cancel or change a message. If a message was delivered earlier and has faded, say so. "+
+  "Always reply in the language and script of the speaker's current message, not the recipient's or the message's: an English request gets an English reply even when names or the message are Marathi or Hindi. Never mix scripts inside a word. ";
 function peopleLine(){ return people.length?" People you know: "+people.map(p=>p.name+(p.role?" ("+p.role+")":"")+(langsOf(p).length?", speaks "+langsOf(p).join(" and "):"")).join("; ")+
   ". Someone who speaks several languages may use any of them; always answer in the one they are using right now.":""; }
 
@@ -1077,7 +1079,7 @@ const LIST_RULES="You manage the family's lists only through your tools. "+
   "Never say a list was changed unless the tool result says ok. If a tool reports a problem, say so plainly. "+
   "Call get_lists when you need to know what is on a list. Keep each item in the words the person used. "+
   "Before deleting a whole list, ask them to confirm; only then call delete_list with confirmed true. "+
-  "If it is unclear which list they mean, ask. Do not add or change anything they did not ask for. "+
+  "If it is unclear which list they mean, ask. Do not add or change anything they did not ask for. Only change a list when the person clearly asks you to; if they are only musing or sharing a plan (like I'm thinking of making pasta), add nothing, though you may offer to add it. "+
   "After a change, confirm it in one short sentence. ";
 
 /* ---------- brain: Gemini free tier, streamed, fast fallback ----------
@@ -1093,7 +1095,7 @@ const skipUntil={};
 let convo=[];
 function persona(){
   const lists=data.lists.map(l=>l.title+": "+(left(l).map(i=>i.text).join(", ")||"(all done)")).join("\n");
-  return "You are TODO, the warm home helper of an Indian family who speak Marathi, Hindi and English. Your name is TODO; never call yourself a bot, an assistant or anything else. "+
+  return "You are TODO, the warm home helper of an Indian family who speak Marathi, Hindi and English. Your name is TODO; never call yourself a bot, an assistant or anything else. Whenever you say your own name, write it as TODO in Latin capital letters, even inside a Devanagari reply; never spell it in Devanagari. Don't add your name where it isn't needed, never speak of yourself in the third person, and never call the person TODO. Reply in the language and script of the person's current message (English gets English even when names are Marathi, and even when the person is known to speak Hindi or Marathi: a short English line like I'm Raju gets a plain English answer), and never mix scripts inside a word. "+
     "You live on a small screen with an expressive face, and everything you write is spoken aloud. "+
     "Reply in one to three short sentences. No markdown, no lists, no emoji, no symbols. "+
     "Always answer in the language the person just spoke: Marathi to Marathi, Hindi to Hindi, English to English. Never switch language in the middle of an answer. Go by their latest message only, not by the languages a person is known to speak: English gets plain English; Devanagari gets Devanagari; only a message that is itself Hindi or Marathi typed in Latin letters (like kya message hai) gets the same romanised Latin letters back. Mix Hindi or Marathi with English only if they mixed it themselves. Decide the language from how the sentence is built, not from single words: an English sentence that contains Indian names or words like Aaji, atta, ghee or tulsi is English and gets an English answer. "+
@@ -1113,7 +1115,7 @@ async function romanFix(text,reply,id,cfg,key){
   if(!isRomanDesi(text)||devaShare(reply)<0.5) return reply;
   const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),7000);
   try{
-    const contents=convo.concat([{role:"model",parts:[{text:reply}]},{role:"user",parts:[{text:"Rewrite your last reply exactly, same meaning and every detail, in Hindi/Marathi written in English letters (romanised), like the person did. Only the rewritten reply."}]}]);
+    const contents=[{role:"user",parts:[{text:text}]},{role:"model",parts:[{text:reply}]},{role:"user",parts:[{text:"Rewrite your last reply exactly, same meaning and every detail, in Hindi/Marathi written in English letters (romanised), like the person did. Only the rewritten reply."}]}];
     const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+id+":generateContent",{method:"POST",signal:ctl.signal,
       headers:{"Content-Type":"application/json","x-goog-api-key":key},
       body:JSON.stringify({systemInstruction:{parts:[{text:persona()+" Reply in Hindi/Marathi written in English letters (romanised), like the person did."}]},contents,generationConfig:cfg})});
@@ -1123,7 +1125,8 @@ async function romanFix(text,reply,id,cfg,key){
   }catch(e){ clearTimeout(tm); return reply; }
 }
 // A delivered message whose checklist items are missing from the reply, same script only, gets them added.
-function addMissing(reply){
+function addMissing(reply,userText){
+  if(isRomanDesi(reply)||(userText&&isRomanDesi(userText))||(userText&&devaShare(userText)>0.05)) return reply;   // only plain English to plain English
   const ids=turn.fetched.filter(id=>turn.deliver.includes(id)); if(!ids.length) return reply;
   // only English to English: Devanagari may be Hindi or Marathi, so a word check there would be wrong
   const rk=pnorm(reply), dr=false, miss=[]; if(devaShare(reply)>0.05) return reply;
@@ -1187,7 +1190,7 @@ async function streamBrain(text,onSentence){
       }
       if(!spoke.trim()){ busy=true; break; }
       spoke=await romanFix(text,spoke,id,cfg,key);
-      spoke=addMissing(spoke);
+      spoke=addMissing(spoke,text);
       convo.push({role:"model",parts:[{text:clean(spoke).trim()}]});
       turnCommit();   // the reply was given: its message changes and deliveries stand
       return {text:spoke};
@@ -1235,7 +1238,7 @@ registerProcessor("mic16k",Mic16k);`;
 function ab2b64(buf){ const b=new Uint8Array(buf); let s=""; for(let i=0;i<b.length;i+=0x8000) s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000)); return btoa(s); }
 function livePersona(){
   const lists=data.lists.map(l=>l.title+": "+(left(l).map(i=>i.text).join(", ")||"(all done)")).join("\n");
-  return "You are TODO, the warm home helper of an Indian family who speak Marathi, Hindi and English. Your name is TODO; never call yourself a bot, an assistant or anything else. "+
+  return "You are TODO, the warm home helper of an Indian family who speak Marathi, Hindi and English. Your name is TODO; never call yourself a bot, an assistant or anything else. Whenever you say your own name, write it as TODO in Latin capital letters, even inside a Devanagari reply; never spell it in Devanagari. Don't add your name where it isn't needed, never speak of yourself in the third person, and never call the person TODO. Reply in the language and script of the person's current message (English gets English even when names are Marathi, and even when the person is known to speak Hindi or Marathi: a short English line like I'm Raju gets a plain English answer), and never mix scripts inside a word. "+
     "You live on a small screen with an expressive face, and you talk out loud. "+
     "Always answer in the language the person just spoke: Marathi to Marathi, Hindi to Hindi, English to English. "+
     "Never switch language in the middle of an answer. Mix Hindi or Marathi with English only if they mixed it themselves. Decide the language from how the sentence is built, not from single words: an English sentence that contains Indian names or words like Aaji, atta, ghee or tulsi is English and gets an English answer. "+

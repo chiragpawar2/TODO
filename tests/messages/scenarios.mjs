@@ -73,7 +73,7 @@ add("leave_deliver", "A17", "Daughter -> father in English, plain", FAM, [
   t("Rahul here, anything for me?", L, reply(/Friday/i, /9|nine/i, /meeting/i), has({ to: RAH, delivered: true }))]);
 add("leave_deliver", "A18", "Cook Hindi -> grandmother Marathi", FAM, [
   t("मैं सुनीता हूँ। आजी को बोलना कि उनकी दवाई वाली खिचड़ी फ्रिज में रखी है, गरम करके खा लें।", has({ from: SUN, to: SHO })),
-  t("मी आजी. माझ्यासाठी काही सांगितलंय का?", D, reply(/खिचडी|खिचड़ी/, /फ्रिज/, /गरम/), has({ to: SHO, delivered: true }))]);
+  t("मी आजी. माझ्यासाठी काही सांगितलंय का?", D, reply(/खिचडी|खिचड़ी/, /फ्रिज|फ्रीज/, /गरम/) /* FIXER NOTE: R3 accept फ्रीज spelling */, has({ to: SHO, delivered: true }))]);
 add("leave_deliver", "A19", "Sender says it in English, recipient asks in romanised Marathi", FAM, [
   t("Anjali here. Let Kamla know the new mop is in the store room.", has({ to: KAM })),
   t("Mi Kamla, majhya sathi kahi niroop aahe ka?", any(/mop|पोछा|पोतेरं|मॉप/i), has({ to: KAM, delivered: true }))]);
@@ -148,7 +148,7 @@ add("recipient", "C09", "Mom / aai as recipient", FAM, [
   t("मी अंजली. काही निरोप?", D, reply(/निळा|निळ्या|ड्रेस/, /इस्त्री/), has({ to: ANJ, delivered: true }))]);
 add("recipient", "C10", "Message to maharaj (cook alias)", FAM, [
   t("Rahul here. Tell maharaj to make extra rotis tonight, guests coming.", tool("leave_message")),
-  t("मैं सुनीता, खाना बनाती हूँ। कुछ बोला है किसी ने?", D, reply(/रोटी/), has({ delivered: true }))]);
+  t("मैं सुनीता, खाना बनाती हूँ। कुछ बोला है किसी ने?", D, reply(/रोटी|रोटि/), has({ delivered: true }))]); // FIXER NOTE: R3 accept plural रोटियां
 add("recipient", "C11", "Role recipient must not deliver to a different role", FAM, [
   t("Anjali here. Tell the driver the car keys are with the watchman.", has({ to: RAJ })),
   t("मैं सुनीता, कुक। मेरे लिए कुछ?", D, not(/चाबी|key|वॉचमैन|चौकीदार/i), has({ to: RAJ, delivered: false }))]);
@@ -172,7 +172,7 @@ add("unknown", "D04", "Message for unknown name: TODO should save or clarify, no
   t("Mohan here, electrician. Any message for me?", L, reply(/Monday/i), has({ to: /Mohan|मोहन/, delivered: true }))]);
 add("unknown", "D05", "Guest relative not in roster", FAM, [
   t("मी अंजली. माझ्या भावाला, सुमितला सांग, चावी शेजारच्या काकूंकडे आहे.", has({ to: /Sumit|सुमित/ })),
-  t("Hi, I'm Sumit, Anjali's brother. Did she leave anything for me?", L, reply(/key/i, /neighbo/i), has({ to: /Sumit|सुमित/, delivered: true }))]);
+  t("Hi, I'm Sumit, Anjali's brother. Did she leave anything for me?", L, reply(/key/i, /neighbo|next door/i) /* FIXER NOTE: R3 accept "aunt next door" */, has({ to: /Sumit|सुमित/, delivered: true }))]);
 
 /* ---------- E: several messages ---------- */
 add("multi", "E01", "Two messages for one person from two senders", FAM, [
@@ -181,7 +181,7 @@ add("multi", "E01", "Two messages for one person from two senders", FAM, [
   t("मैं सुनीता, कोई संदेश?", D, reply(/पोहा|पोहे/, /चीनी|शक्कर/), pending(0))]);
 add("multi", "E02", "One sentence, messages for two people", FAM, [
   t("I'm Anjali. Tell Sunita to make idli, and tell Kamla to clean the fridge.", has({ to: SUN, text: [/idli|इडली/i] }), has({ to: KAM, text: [/fridge|फ्रिज/i] }), count(2)),
-  t("मी कमला. माझ्यासाठी काय?", D, reply(/फ्रिज/), not(/इडली|idli/i), has({ to: SUN, delivered: false }))]);
+  t("मी कमला. माझ्यासाठी काय?", D, reply(/फ्रिज|फ्रीज/) /* FIXER NOTE: R3 accept फ्रीज */, not(/इडली|idli/i), has({ to: SUN, delivered: false }))]);
 add("multi", "E03", "Three messages different people, each asks", FAM, [
   t("Rahul here. Tell Raju to come at 8, tell Kamla to iron my shirts, and tell Aarav to pack his bag.", count(3)),
   t("मैं राजू, मेरे लिए?", D, reply(/8|आठ|८/), not(/शर्ट|बैग|बॅग/)),
@@ -296,7 +296,7 @@ add("expiry", "H09", "Sender asks if message was delivered", SMALL, [
   t("Anjali here. Did Sunita get my message?", L, any(/yes|delivered|told|got/i))]);
 add("expiry", "H10", "Tomorrow message left at night should survive the night", FAM, [
   t("Rahul here. Tell Raju tomorrow at 6 am we leave for Pune.", has({ to: RAJ })), jump(9),
-  t("राजू हूँ, कोई मैसेज?", D, reply(/पुणे/, /6|छह|६/))]);
+  t("राजू हूँ, कोई मैसेज?", D, reply(/पुणे/, /6|छह|६|छः|छ बजे/))]); // FIXER NOTE: R3 accept छ बजे
 
 /* ---------- I: identity ---------- */
 add("identity", "I01", "Unnamed speaker leaves message -> TODO asks who", FAM, [
@@ -353,7 +353,7 @@ add("indirect", "K05", "Driver: kahan jaana hai?", FAM, [
   t("Raju hoon, aaj kahan jaana hai?", L, reply(/hospital|aspatal/i, /11|gyarah/i), has({ to: RAJ, delivered: true }))]);
 add("indirect", "K06", "Cook: kuch bola hai memsaab ne?", SMALL, [
   t("मी अंजली. सुनीताला सांग, आज भाकरी आणि पिठलं.", has({ to: SUN })),
-  t("Memsaab ne kuch bola hai kya? Sunita hoon.", L, reply(/bhakri|bhakhri/i, /pithla|besan/i))]);
+  t("Memsaab ne kuch bola hai kya? Sunita hoon.", L, reply(/bhakri|bhakhri|bhakari|भाकरी/i, /pithl|besan|पिठल/i))]); // FIXER NOTE: R3 accept bhakari / pithalam / pithle spellings
 
 /* ---------- L: long multi-detail ---------- */
 add("long_detail", "L01", "Party menu with quantities", SMALL, [
@@ -367,7 +367,7 @@ add("long_detail", "L03", "Marathi multi-task for maid", FAM, [
   t("मी कमला. आज काय काय करायचं?", D, reply(/भांडी/, /हॉल/, /बेडरूम/, /कपडे/, /कुंड्या|झाड|रोप/, /बारा|12|१२/))]);
 add("long_detail", "L04", "English recipe-like detail to Hindi cook, no invented items", SMALL, [
   t("Anjali here. Tell Sunita: dal with only half spoon salt, no green chilli, 4 rotis for Aaji soft ones, and rice only one cup.", has({ to: SUN })),
-  t("मैं सुनीता, कोई संदेश?", D, reply(/नमक/, /मिर्च/, /4|चार|४/, /रोटी/, /चावल/, /एक|1|१/), not(/प्याज|आलू|पनीर/))]);
+  t("मैं सुनीता, कोई संदेश?", D, reply(/नमक/, /मिर्च/, /4|चार|४/, /रोटी|रोटि/ /* FIXER NOTE: R3 accept रोटियां */, /चावल/, /एक|1|१/), not(/प्याज|आलू|पनीर/))]);
 add("long_detail", "L05", "Phone numbers and amounts survive", FAM, [
   t("Rahul here. Tell Anjali the AC repair guy Salim will call from 98220 12345, the charge is 1800 rupees, pay him cash.", has({ to: ANJ, text: [/98220 ?12345/, /1800/] })),
   t("Anjali here, any message?", L, reply(/98220 ?12345|9 ?8 ?2 ?2 ?0/, /1800|1,800|eighteen hundred/i, /Salim/, /cash/i))]);

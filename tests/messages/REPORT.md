@@ -133,3 +133,56 @@ Cancel/change (G01–G08 conclusive: paneer replaces bhindi, 7 to 8, 10 to 15 ro
 ### Remaining failures / root cause
 - There are no conclusive failures. The only blocker is the free-tier quota on the project key. **Re-run the same two id sets after the daily quota resets** (Pacific midnight), or with a different key.
 - Side note for a fixer: models outside the list, gemini-2.5-flash and gemini-2.0-flash, now return 404 "no longer available". GEMINI_MODELS does not use them, but LIVE_MODELS still lists `gemini-2.5-flash-native-audio-latest` as the Live fallback (`LIVE_MODELS` const, used in the Live connect loop in todo-lists/phone/phone_page.html). Check that it is still served.
+
+## Round 3 live run (backup keys)
+Tester, 2026-11-25, page docs/index.html as rebuilt in Round 2. Keys: GEMINI_API_KEY_3 (targeted, spot, list, first 60 of the rest, then it went busy at J01) and GEMINI_API_KEY_4 (the last 30 ids including the busy re-runs, and the Live check). Neither key returned a hard 429 in a probe. Key 3 started giving busy replies late in its run. Keys 5, 6 and main were not needed.
+
+### Per id, before (Round 1 results.json) → after
+- Targeted: F07 busy→pass, I02 busy→pass, B05 busy→pass, B08 FAIL→pass, K06 FAIL→FAIL*, A16 FAIL→pass, C02 FAIL→pass, C03 busy→pass, **E06 pass→FAIL (regression)**, **C06 busy→FAIL**, G03 busy→pass, H04 busy→pass, H09 busy→pass, K02 busy→pass (but has a hidden bug, see below). **11/14.**
+- Spot: A03 pass→pass, A10 pass→pass, A18 FAIL→FAIL*, B02 pass→pass, C04 busy→pass, C09 busy→pass, D02 pass→pass, E01 busy→pass, E08 FAIL→pass, F03 FAIL→pass, F06 FAIL→pass, G05 pass→pass, H05 FAIL→pass, I01 FAIL→pass, I07 FAIL→pass, J02 pass→pass, L01 pass→pass, M02 pass→pass, N01 pass→pass, O03 FAIL→pass. **19/20.**
+- Rest (85 ids): 78 pass, plus FAIL* C10, D05, E02, H10, L04, a real **FAIL for N03**, and I05 busy (its turn 1 was busy, so the harness flagged turn 2 as a fail).
+- \* = harness regex too strict and the reply is actually correct: K06 "bhakari / pithalam", A18 and E02 "फ्रीज" vs /फ्रिज/, C10 and L04 "रोटियां" vs /रोटी/, D05 "aunt next door" vs /neighbo/, H10 "छ बजे" vs /6|छह|६/. **Loosen these regexes in scenarios.mjs.**
+
+### Totals
+- Conclusive: 118/119. **Busy: 1** (I05).
+- Raw pass rate, excluding busy: **108/118 = 91.5%** (Round 1: 41/119).
+- With the 7 regex-only failures counted as passes: **115/118 = 97.5%**.
+- Stubbed list test: **15/16**. Fail: "I'm thinking of making pasta tonight" added Pasta to Groceries, though no one asked.
+- Live check: gemini-3.8-live and gemini-3.1-flash-live-preview both connect, call add_items, and speak plus transcribe Marathi (first audio in about 0.8 s and 1.0 s).
+- Offline: voice_rules **8/8 PASS**. turn_sequence: both 3.8-style and 3.1-style give begin→COMMIT, and no-tool is empty, as expected. probe_matching gives **18 MATCH + 2 ASK** (unchanged).
+
+### Watch items
+- (a) "Who are you" after a name was given: **not seen.** set_speaker was called on every turn where a name was given. I02 asked for the name only when it was really missing.
+- (b) Truncation: **fixed.** B08 and A18 delivered in full.
+- (c) Romanised Hinglish answered in Devanagari: **fixed** for B08, K06 and K02 (romanised replies). Mixed scripts still leak through: F07 answered an English speaker in Marathi, K02 t1 answered an English speaker in garbled romanised Marathi, and H09 had an Arabic letter inside "अंजلي".
+- (d) Dropped details: none in the deliveries. K02 got a **spurious** "Also: clean the terrace" appended (see 3).
+
+### Real failures, root cause, function to change (todo-lists/phone/phone_page.html)
+1. **C06**: "ड्राइवर को बोलो" was saved with `to:"ड्र이버"`, a garbled string with Hangul in it, and returned ok:true. The message was dead, so Raju got "no message", and the reply called him "Aaraj". Root cause: `runMsgTool` → the `leave_message` branch pushes `{raw:to}` for unresolved recipients and still saves (`unknown.push(to)`). Fix: when `resolvePeople(to)` finds no one, return `{ok:false,error:"unknown_recipient",people:knownPeople()}` and save nothing (Round 1 fix #3, never applied). Optionally reject `to` that contains non-Devanagari, non-Latin script.
+2. **E06 (regression)**: Anjali asked "what messages are pending". The model called only set_speaker, never list_messages, and refused with "Only the person a message is for can hear it". Root cause: `MSG_RULES` (the "Only the person a message is for hears it…" sentence) is read as a ban on listing. Fix in `MSG_RULES`: "If someone asks what messages are pending or kept, call list_messages with asked_by = the speaker, and say who each is for and from." The `list_messages` tool itself already redacts text correctly.
+3. **K02 (hidden)**: a romanised Hinglish delivery got "Also: clean the terrace" in English appended. Root cause: `addMissing` treats any reply with devaShare≈0 as English, then checks English checklist words against a Hinglish reply. Fix: in `addMissing`, return early when `isRomanDesi(reply)` holds (or the user text is romanised desi), i.e. only when both message and reply are plain English.
+4. **N03**: "Tu kon aahes?" got the reply "मी टूडू आहे" with the name in Devanagari. Root cause: `persona()` does not pin the written form of the name. Fix in `persona()`: "Always write your name as TODO in Latin capitals, even inside Devanagari replies."
+5. **List: pasta**: "thinking of making pasta" was added as an item. Root cause: `LIST_RULES` does not say to add only on an explicit request. Fix in `LIST_RULES`: "Only change a list when the person asks you to; for plans or musings, ask if they want it added."
+6. Minor: language mismatch (F07 and K02 t1 answered an English speaker in Marathi or garbled romanised Marathi). Fix in `persona()` and `MSG_RULES`: "Reply in the language and script of the person's current message, not the recipient's."
+
+## Round 3 fixes
+Fixer, 2026-11-25. All code changes in todo-lists/phone/phone_page.html, rebuilt with ./run.sh phone. Keys 5 and 6 (key 3 was busy for the list test, key 4 slow).
+
+### Changes
+1. C06: `runMsgTool` leave_message: an unresolved recipient now returns `{ok:false,error:"unknown_recipient",said,known_people,hint}` and saves nothing. Role matching several people still asks which one. The hint and MSG_RULES say: if the speaker already said who the new person is ("my brother Sumit"), call add_person and then save again; otherwise ask.
+2. E06: MSG_RULES: when asked what messages are pending, call list_messages with asked_by = the speaker and say who each is for and from. Never refuse.
+3. K02: `addMissing(reply,userText)` returns early unless both the message and the reply are plain English (no romanised Desi, no Devanagari). Also `romanFix` now sends only the user text and the reply, not the tool history; with the tool history the rewrite call was failing silently. This is why K02 and K06 came back in Devanagari.
+4. N03: persona() and livePersona(): when TODO says its own name it writes TODO in Latin capitals, even in Devanagari. It does not add its name needlessly, use the third person, or call the user TODO. The first wording made it call the user "TODO".
+5. Pasta: LIST_RULES: change a list only on a clear request. For musing, add nothing; it may offer.
+6. Language: persona(), livePersona() and MSG_RULES: reply in the language and script of the current message (English → English even when names, the recipient or the person's known languages are Hindi or Marathi). Never mix scripts within a word.
+7. Extra (B05 regression found in the spot check): the leave_message `message` param says to keep times and deadlines in the text even when `until` is set. The model had moved "before 6" into `until` only.
+- scenarios.mjs, FIXER NOTE R3 widened only: K06 (bhakari/pithal/pithle/Devanagari), A18 and E02 (फ्रीज), C10 and L04 (रोटि for रोटियां), D05 ("next door"), H10 (छ बजे / छः).
+
+### Per id, before → after (final page)
+C06 FAIL→pass (twice; one later run got a Devanagari reply to "Raju here. Message hai kya?", so the language is flaky but the recipient was resolved correctly) · E06 FAIL→behaviour fixed: list_messages is called and nothing is refused, but the harness still FAILs because it expects the text ("soup", "dust"), which the tool hides from a non-sender. This is a product question, not a fix. · K02 FAIL→pass · N03 FAIL→pass · F07 pass→pass · H09 pass→pass · K06 FAIL*→pass · A18 FAIL*→pass · C10 FAIL*→pass · D05 FAIL*→pass (now via add_person) · E02 FAIL*→pass · H10 FAIL*→pass · L04 FAIL*→pass · I05 busy→pass. Targeted: 13/14, with E06 being the product conflict.
+
+### Regression
+- Spot (15 R3 passes: A03 A10 B02 B05 C02 C04 D02 E01 F03 G03 H04 I01 J02 L01 O03): 14/15. B05 dropped "before 6" and was fixed by change 7. Re-run of B05: pass.
+- Later re-runs: I02 had a regression (an English "I'm Raju." answered in romanised Hindi), fixed by the stronger language line, then passed. L02 failed once: the reply said "char baje" and the regex /4|chaar/ is too strict. I did not loosen it because L02 is not on the allowed list.
+- Stubbed list test (key 4): 14/16. The 2 fails were busy (key 4 took more than 500 s per call), not wrong. Pasta: **pass**, an offer and no add. A re-run with key 3 was all busy, so it is inconclusive.
+- Offline: voice_rules 8/8 PASS. turn_sequence 3.8 and 3.1 both begin→COMMIT, no-tool empty. probe_matching 18 MATCH + 2 ASK (unchanged).
